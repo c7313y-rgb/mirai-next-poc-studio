@@ -177,6 +177,13 @@ CREATE TABLE IF NOT EXISTS lesson_responses (
   UNIQUE(lesson_id, user_id)
 );
 CREATE INDEX IF NOT EXISTS idx_lesson_responses_user ON lesson_responses(user_id);
+CREATE TABLE IF NOT EXISTS lesson_baselines (
+  lesson_id INTEGER NOT NULL REFERENCES lessons(id),
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  before_score INTEGER NOT NULL CHECK(before_score BETWEEN 1 AND 5),
+  submitted_at TEXT NOT NULL,
+  PRIMARY KEY(lesson_id, user_id)
+);
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY, user_id INTEGER, role TEXT, type TEXT NOT NULL,
   target_type TEXT, target_id INTEGER, meta TEXT,

@@ -22,12 +22,21 @@ export function destroySession(req, res) {
   res.setHeader('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
 }
 
-export function loadUser(req, _res, next) {
+const passwordChangePaths = new Set([
+  '/api/auth/me', '/api/auth/password', '/api/auth/logout',
+  '/api/auth/config', '/api/auth/login', '/api/auth/qr', '/api/auth/demo',
+]);
+
+export function loadUser(req, res, next) {
   const token = parseCookies(req.headers.cookie)[COOKIE];
   if (token) {
     const row = q.one(`SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id=? AND s.expires_at > ? AND u.active=1`, sha256(token), nowIso());
     const demoIds = JSON.parse(q.one("SELECT value FROM settings WHERE key='demo_user_ids'")?.value || '[]');
     if (row && (config.demoMode || !demoIds.includes(row.id))) req.user = row;
+  }
+  // 画面遷移だけでなく、画像等を含むAPIへの直接アクセスも制限する。
+  if (req.user?.must_change_password && req.path.startsWith('/api/') && !passwordChangePaths.has(req.path)) {
+    return res.status(403).json({ error: '初期パスワードを変更してから利用してください', code: 'PASSWORD_CHANGE_REQUIRED' });
   }
   next();
 }
@@ -47,14 +56,21 @@ export function csrfGuard(req, res, next) {
   next();
 }
 
-// ログイン試行の簡易レート制限（1プロセス内。複数台構成にする場合は共有ストアへ）
+// 1プロセス内の制限。複数台構成では同じ方針を共有ストア/入口側にも適用する。
 const attempts = new Map();
-export function loginRateLimited(key) {
+const LOGIN_WINDOW_MS = 15 * 60_000;
+const MAX_RATE_LIMIT_KEYS = 10000;
+export function loginRateLimited(key, limit = 10) {
   const now = Date.now();
-  const a = (attempts.get(key) || []).filter((t) => now - t < 15 * 60_000);
+  for (const [k, values] of attempts) {
+    if (!values.length || now - values.at(-1) >= LOGIN_WINDOW_MS) attempts.delete(k);
+  }
+  if (!attempts.has(key) && attempts.size >= MAX_RATE_LIMIT_KEYS) return true;
+  const a = (attempts.get(key) || []).filter((t) => now - t < LOGIN_WINDOW_MS);
+  if (a.length >= limit) return true;
   a.push(now);
   attempts.set(key, a);
-  return a.length > 10;
+  return false;
 }
 
 // 教員の担当クラス判定（CM-02：所属外の情報は表示しない）

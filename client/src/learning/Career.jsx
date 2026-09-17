@@ -87,7 +87,7 @@ export default function Career() {
           </div>
           <span className="badge warn">共有プレビュー · 未接続</span>
         </div>
-        <p>{sharing.note}</p>
+        <p>以下は、キャリアへの反映を検討するための拡張データのプレビューです。項目・利用目的・同意と受取側の仕様は未合意のため、副担任mirAIへの送信は行いません。</p>
         <div className="connection-flow">
           <div>
             <b>mirAI NEXT</b>
@@ -96,7 +96,7 @@ export default function Career() {
           <span>→</span>
           <div>
             <b>共有データ</b>
-            <small>内容を確認・JSONで出力</small>
+            <small>検討用データを確認</small>
           </div>
           <span>⇢</span>
           <div className="pending">
@@ -106,7 +106,7 @@ export default function Career() {
         </div>
         <div className="two-col">
           <div>
-            <h3>共有を予定している項目</h3>
+            <h3>拡張共有で検討する項目</h3>
             {sharing.fields.map((x) => (
               <p className="share-field" key={x}>
                 <span>✓</span>
@@ -123,14 +123,15 @@ export default function Career() {
               </p>
             ))}
             <p className="muted small">
-              個人のキャリアデータは企業には公開されません。教員のコメントを含む標準連携データは運営画面から出力できます。
+              個人のキャリアデータは企業には公開されません。合意した範囲の標準連携データは運営画面から出力します。ここに表示する拡張項目は、合意前に外部へ渡さないでください。
             </p>
           </div>
         </div>
         <details className="json-details">
-          <summary>実際に共有するデータのプレビュー</summary>
+          <summary>検討用の拡張データを見る（未合意・未送信）</summary>
           <pre>{JSON.stringify(sharing.payload, null, 2)}</pre>
         </details>
+        <p className="muted small">JSONには学びの記録が含まれます。共有端末には保存せず、保存した場合は利用後に削除してください。</p>
         <div className="spread">
           <span className="small muted">最終送信：なし ／ mirAI取込確認：未検証</span>
           <button
@@ -143,7 +144,7 @@ export default function Career() {
               )
             }
           >
-            共有予定データをJSONで保存 ↓
+            検討用JSONをこの端末に保存 ↓
           </button>
         </div>
       </section>

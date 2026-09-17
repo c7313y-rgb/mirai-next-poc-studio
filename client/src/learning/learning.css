@@ -620,3 +620,20 @@
     padding: 18px;
   }
 }
+
+.lr-baseline-panel {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px;
+  background: #f5f8f4;
+}
+.lr-baseline-panel h2 { margin-bottom: 8px; }
+.lr-reflection-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.lr-reflection-fields:disabled { opacity: .72; }
+.lr-draft-status { border-top: 1px solid var(--line); padding-top: 14px; gap: 8px; }
+.lr-draft-status p { margin: 0; }
+.lr-baseline-panel .btn, .lr-draft-status .btn { align-self: flex-start; }
+@media (max-width: 650px) {
+  .lr-baseline-panel { padding: 16px; }
+  .lr-baseline-panel .btn { width: 100%; }
+}

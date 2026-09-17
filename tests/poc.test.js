@@ -50,6 +50,11 @@ test('CSV一括登録：QR付きの資格情報が返り、仮名IDは氏名を�
   assert.match(s1.qrSvg, /<svg/);
   const u = env.q.one("SELECT pseudo_id FROM users WHERE login_id='s1'");
   assert.match(u.pseudo_id, /^MN-[A-Z0-9]{10}$/);
+  for (const [id, password] of [['t1', 'password1'], ['t2', 'password2'], ['c1', 'password1']]) {
+    const account = client(env.base);
+    assert.equal((await account.login(id, password)).status, 200);
+    assert.equal((await account.post('/api/auth/password', { current: password, next: password + '-updated' })).status, 200);
+  }
 });
 
 test('CSRFヘッダなしの更新系APIは拒否', async () => {
@@ -65,7 +70,7 @@ test('生徒：撮影→AI読み取り→確認修正→提出→フィードバ
   const th = await admin.post('/api/admin/themes', { companyId: coId, title: 'AIで学校の困りごとを減らす', summary: '概要', questions: ['問い1'], field: '情報・デジタル' });
   assert.equal((await admin.post(`/api/admin/themes/${th.data.id}/status`, { status: 'published' })).status, 200);
   const t1 = client(env.base);
-  await t1.login('t1', 'password1');
+  await t1.login('t1', 'password1-updated');
   const cls = await t1.get('/api/teacher/classes');
   const classA = cls.data.classes[0].id;
   assert.equal((await t1.post('/api/teacher/distributions', { themeId: th.data.id, classIds: [classA], startDate: shift(today, -1), endDate: shift(today, 10) })).status, 201);
@@ -107,7 +112,7 @@ test('生徒：撮影→AI読み取り→確認修正→提出→フィードバ
 
 test('権限：担当外クラス・企業の画像閲覧・未配信テーマは拒否（CM-02）', async () => {
   const t2 = client(env.base);
-  await t2.login('t2', 'password2');
+  await t2.login('t2', 'password2-updated');
   const classA = env.q.one("SELECT c.id FROM classes c WHERE c.name='A'").id;
   assert.equal((await t2.get(`/api/teacher/classes/${classA}/dashboard`)).status, 403);
   const s1id = env.q.one("SELECT id FROM users WHERE login_id='s1'").id;
@@ -115,7 +120,7 @@ test('権限：担当外クラス・企業の画像閲覧・未配信テーマ�
 
   const imgId = env.q.one('SELECT id FROM record_images LIMIT 1').id;
   const c1 = client(env.base);
-  await c1.login('c1', 'password1');
+  await c1.login('c1', 'password1-updated');
   assert.equal((await c1.get(`/api/files/images/${imgId}`)).status, 403);
   assert.equal((await c1.get('/api/teacher/classes')).status, 403);
 
@@ -128,7 +133,7 @@ test('権限：担当外クラス・企業の画像閲覧・未配信テーマ�
 
 test('企業レポート：少人数の学校別数値は非表示、個人の文章は含まない', async () => {
   const c1 = client(env.base);
-  await c1.login('c1', 'password1');
+  await c1.login('c1', 'password1-updated');
   const r = await c1.get('/api/company/report');
   assert.equal(r.status, 200);
   const t = r.data.themes[0];
@@ -140,7 +145,7 @@ test('企業レポート：少人数の学校別数値は非表示、個人の�
 
 test('授業後アンケート・KPI集計', async () => {
   const t1 = client(env.base);
-  await t1.login('t1', 'password1');
+  await t1.login('t1', 'password1-updated');
   const pend = await t1.get('/api/teacher/lesson-surveys');
   assert.equal(pend.data.pending.length, 1);
   const bad = await t1.post('/api/teacher/lesson-surveys', { distributionId: pend.data.pending[0].distributionId, answers: { ease: 9 } });

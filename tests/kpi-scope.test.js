@@ -14,7 +14,7 @@ beforeEach(() => {
   saveSettings({ poc_start: '2026-08-01', poc_end: '2026-10-31', excluded_periods: [] });
   q.run("INSERT INTO schools(id,code,name,start_date) VALUES(1,'S1','第1高校','2026-08-01'),(2,'S2','第2高校','2026-08-01')");
   q.run("INSERT INTO classes(id,school_id,grade,name) VALUES(1,1,1,'A'),(2,2,1,'B')");
-  q.run("INSERT INTO companies(id,code,name) VALUES(1,'C1','第1企業'),(2,'C2','第2企業')");
+  q.run("INSERT INTO companies(id,code,name,industry) VALUES(1,'C1','第1企業','製造業'),(2,'C2','第2企業','食品業')");
   q.run("INSERT INTO users(id,login_id,password_hash,role,school_id,class_id,pseudo_id) VALUES(1,'s1','test','student',1,1,'TEST-S1'),(2,'s2','test','student',2,2,'TEST-S2'),(3,'s3','test','student',1,1,'TEST-S3'),(4,'s4','test','student',1,1,'TEST-S4')");
   q.run("INSERT INTO users(id,login_id,password_hash,role,company_id) VALUES(5,'c1','test','company',1),(6,'c2','test','company',2)");
   q.run("INSERT INTO users(id,login_id,password_hash,role,school_id) VALUES(7,'t1','test','teacher',1)");
@@ -137,10 +137,12 @@ test('連携出力: 期間外の回答・未来のコメントを含めず、JSO
   survey('student', 1, { overall: 1 }, '2026-10-01');
   const data = await buildExportDataset({ ...PERIOD, schoolId: 1 });
   assert.deepEqual(data.records[0].teacher_comments, ['期間内コメント']);
-  assert.deepEqual(JSON.parse(data.records[0].survey_answers), { overall: 4 });
+  assert.equal('survey_answers' in data.records[0], false, '合意していないアンケートは標準出力から除外');
   const json = JSON.parse(renderExport(data, 'json').content);
   assert.equal(json.students[0].grade_class, '1年A組');
   assert.equal(json.students[0].records[0].theme.company_id, 1);
+  assert.equal(json.students[0].records[0].theme.company_industry, '製造業');
+  assert.equal('survey_answers' in json.students[0], false);
 });
 
 test('データなし: 関心率・継続利用率・連携充足率を0%と誤認させない', async () => {

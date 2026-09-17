@@ -3,9 +3,9 @@ import { q, tx, nowIso, parseJson } from '../db.js';
 import { requireRole } from '../auth.js';
 import { logEvent } from '../lib/log.js';
 import { saveFile, deleteFile } from '../lib/filestore.js';
-import { uploadImages, sniffImage } from '../lib/upload.js';
+import { uploadImages, sanitizeImage } from '../lib/upload.js';
 import { activeThemesForClass, isThemeActiveForClass, themeDto } from '../lib/themes.js';
-import { enqueue } from '../jobs.js';
+import { enqueue, queueRecordAnalysis } from '../jobs.js';
 import { openSurveysFor, surveyDto, validateAnswers } from '../lib/surveys.js';
 
 const r = Router();
@@ -63,10 +63,13 @@ r.post('/themes/:id/interest', (req, res) => {
 r.post('/records', (req, res, next) => uploadImages(req, res, (err) => {
   if (err) return res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? '画像が大きすぎます（1枚10MBまで）' : err.code === 'LIMIT_FILE_COUNT' ? '画像は1回3枚までです' : '画像を受け取れませんでした' });
   next();
-}), (req, res) => {
-  const files = req.files || [];
-  const detected = files.map((f) => sniffImage(f.buffer));
-  if (detected.some((m) => !m)) return res.status(400).json({ error: 'JPEG・PNG・WebPの画像を選んでください' });
+}), async (req, res, next) => {
+  let files;
+  try {
+    files = await Promise.all((req.files || []).map((f) => sanitizeImage(f.buffer)));
+  } catch {
+    return res.status(400).json({ error: '読み取れるJPEG・PNG・WebP画像（2400万画素以下）を選んでください' });
+  }
   const u = req.user;
   const saved = [];
   try {
@@ -75,7 +78,7 @@ r.post('/records', (req, res, next) => uploadImages(req, res, (err) => {
       files.forEach((f, i) => {
         const s = saveFile(f.buffer);
         saved.push(s.fileName);
-        q.run('INSERT INTO record_images(record_id, file_name, mime, size, encrypted) VALUES(?,?,?,?,?)', rec.lastInsertRowid, s.fileName, detected[i], f.size, s.encrypted);
+        q.run('INSERT INTO record_images(record_id, file_name, mime, size, encrypted) VALUES(?,?,?,?,?)', rec.lastInsertRowid, s.fileName, f.mime, f.size, s.encrypted);
       });
       return Number(rec.lastInsertRowid);
     });
@@ -84,7 +87,7 @@ r.post('/records', (req, res, next) => uploadImages(req, res, (err) => {
     res.status(201).json({ id });
   } catch (e) {
     saved.forEach(deleteFile);
-    throw e;
+    next(e);
   }
 });
 
@@ -111,7 +114,7 @@ r.post('/records/:id/submit', (req, res) => {
     type, type === 'theme' ? Number(themeId) : null, type === 'experience' ? experienceDate || null : null, body, now, rec.id);
   // 未提出アラートを自動解消
   q.run("UPDATE alerts SET status='auto_resolved', handled_at=? WHERE student_id=? AND kind='inactive' AND status='open'", now, req.user.id);
-  enqueue('analyze', { recordId: rec.id });
+  queueRecordAnalysis(rec.id);
   logEvent(req.user, 'record_submit', 'record', rec.id, { type, edited: rec.ocr_text ? rec.ocr_text.trim() !== body : null });
   res.json({ ok: true });
 });

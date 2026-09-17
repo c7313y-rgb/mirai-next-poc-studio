@@ -51,6 +51,7 @@ export default function CurriculumStudio({ role = 'company' }) {
     setDirty(true);
   };
   const openEditor = (curriculum) => {
+    if (dirty && !window.confirm('未保存の変更があります。別の教材を開くと変更は失われます。開きますか？')) return;
     setEditor(toEditor(curriculum));
     setCreating(false);
     setDirty(false);
@@ -144,6 +145,8 @@ export default function CurriculumStudio({ role = 'company' }) {
           <button
             className="btn primary"
             onClick={() => {
+              if (dirty && !window.confirm('未保存の変更があります。新しい教材の作成に移動しますか？')) return;
+              setDirty(false);
               setCreating(true);
               setEditor(null);
               setError(null);
@@ -201,18 +204,21 @@ export default function CurriculumStudio({ role = 'company' }) {
             </Field>
             <Field
               label="授業のもとになる企業コンテンツ"
-              hint="事業や技術の紹介、取り組む課題、生徒に考えてほしいことを文章で入力します。"
+              hint="事業の紹介・生徒に考えてほしい問いに加え、末尾に資料名・出典URL・使用許諾の範囲を記載してください。"
             >
               <textarea
                 className="input lr-source"
                 required
                 minLength={30}
                 maxLength={20000}
-                placeholder="私たちの会社が取り組んでいることは…"
+                placeholder={"私たちの会社が取り組んでいることは…\n生徒に考えてほしい問い：…\n出典（資料名・URL）：…\n使用できる範囲・条件：…"}
                 value={source.sourceContent}
                 onChange={(e) => setSource({ ...source, sourceContent: e.target.value })}
               />
             </Field>
+            <p className="lr-note">
+              自社で権利を保有するか、授業利用の許諾を得た内容を入力してください。個人情報や社外秘は含めず、引用部分と出典を明確にしてください。公開前に担当者による確認が必要です。
+            </p>
             <div className="lr-form-three">
               <Field label="対象学年">
                 <input
@@ -433,6 +439,7 @@ export default function CurriculumStudio({ role = 'company' }) {
                 合計 {totalMinutes} / {editor.duration} 分
               </span>
             </div>
+            <p className="muted small">各活動の「問い」「生徒が残す成果」「教員が確かめること」を具体的にすると、授業で使いやすくなります。</p>
             <div className="lr-stage-editor-list">
               {editor.stages.map((s, i) => (
                 <div className="lr-stage-editor" key={i}>
@@ -474,7 +481,7 @@ export default function CurriculumStudio({ role = 'company' }) {
                         />
                       </Field>
                     </div>
-                    <Field label="生徒の活動・問い">
+                    <Field label="生徒の活動・問い" hint="生徒に見せる内容です。資料の出典や参照URLも、ここに記載してください。">
                       <textarea
                         className="input"
                         required
@@ -490,7 +497,7 @@ export default function CurriculumStudio({ role = 'company' }) {
                         }
                       />
                     </Field>
-                    <Field label="教員向けの進行メモ">
+                    <Field label="教員向けの進行メモ" hint="生徒への声かけ・つまずきへの対応・評価の見方などを記載します。">
                       <textarea
                         className="input lr-short-textarea"
                         maxLength={3000}
@@ -534,7 +541,7 @@ export default function CurriculumStudio({ role = 'company' }) {
                 ＋ 活動を追加する
               </button>
             )}
-            <Field label="振り返り・評価の観点">
+            <Field label="振り返り・評価の観点" hint="目標に対して、どの発言・成果物・行動を見取るかを具体的にします。">
               <textarea
                 className="input"
                 required
@@ -549,6 +556,12 @@ export default function CurriculumStudio({ role = 'company' }) {
               <p>{editor.sourceContent}</p>
             </details>
             <ErrorBox error={error} />
+            {!teacher && (
+              <div className="lr-note">
+                <b>学校へ提供する前に</b><br />
+                内容の正確さ・出典・使用許諾・個人情報の有無を確認してください。提供後は、このPoCの教員向け教材ライブラリに表示されます。特定の学校だけに限定する設定はありません。
+              </div>
+            )}
             <div className="lr-editor-actions">
               {editable ? (
                 <>

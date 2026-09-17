@@ -146,7 +146,7 @@ export async function computeKpis(opts = {}) {
       k('K-C3', '企業側', '生徒の関心反応率', ratio(interested, viewers), T['K-C3'], 'pct', { note: `期間内に初回閲覧した ${viewers}組のうち、期間内に関心選択 ${interested}組（生徒×テーマ）。再閲覧は対象外` }),
       k('K-C4', '企業側', '継続参加意向', ratio(yesCompanies, participatingCompanies.size), T['K-C4'], 'pct', { note: `各社の期間内最終回答：継続したい ${yesCompanies}社／参加 ${participatingCompanies.size}社（回答 ${latestCompanyAnswers.size}社、未回答は分子に含めない）` }),
       k('K-X1', '共通', 'テーマ記録件数（テーマ別の最少件数）', minimumPerTheme, T['K-X1'], 'count', { achieved: themeCounts.length ? themesMeeting === themeCounts.length : null, note: `全テーマが${T['K-X1']}件以上で達成。目標到達 ${themesMeeting}／${themeCounts.length}テーマ（平均 ${avgPerTheme === null ? '—' : avgPerTheme.toFixed(1)}件）。記録は選択期間内`, detail: themeCounts, average: avgPerTheme }),
-      k('K-X2', '共通', 'データ連携充足率', fill.rate, T['K-X2'], 'pct', { note: '選択期間・学校の提出記録で、必須項目を1件以上出力できる割合。mirAI側の取込成功を示す値ではありません', detail: fill.detail }),
+      k('K-X2', '共通', 'データ連携充足率', fill.rate, T['K-X2'], 'pct', { note: `選択期間・学校の提出記録で、企業の業種分野を含む必須項目を1件以上出力できる割合。全必須項目がそろう記録 ${fill.completeRecords}件。mirAI側の取込成功を示す値ではありません`, detail: fill.detail, completeRecordRate: fill.completeRecordRate }),
     ],
   };
 }

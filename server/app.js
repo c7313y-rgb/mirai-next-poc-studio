@@ -11,15 +11,20 @@ import adminRoutes from './routes/admin.js';
 import fileRoutes from './routes/files.js';
 import learningRoutes from './routes/learning.js';
 import { ai } from './ai/index.js';
+import { config } from './config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export function createApp() {
   const app = express();
-  app.set('trust proxy', 1);
+  const proxyHops = Number(process.env.TRUST_PROXY_HOPS || 0);
+  if (!Number.isInteger(proxyHops) || proxyHops < 0 || proxyHops > 3) throw new Error('TRUST_PROXY_HOPS must be 0–3');
+  // Default to the socket IP. Only trust forwarded IPs behind a known, fixed proxy chain.
+  app.set('trust proxy', proxyHops || false);
   app.disable('x-powered-by');
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    if (config.isProd) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Permissions-Policy', 'camera=(self), geolocation=(), microphone=()');

@@ -50,9 +50,11 @@ r.get('/kpi.csv', async (req, res) => {
 // ---------- 設定 ----------
 r.get('/settings', (req, res) => res.json({ settings: getSettings(), tags: INTEREST_TAGS }));
 r.put('/settings', (req, res) => {
-  const s = saveSettings(req.body || {});
-  audit(req, 'settings_update', req.body);
-  res.json({ settings: s });
+  try {
+    const s = saveSettings(req.body || {});
+    audit(req, 'settings_update', req.body);
+    res.json({ settings: s });
+  } catch (error) { res.status(400).json({ error: error.message }); }
 });
 
 // ---------- A-02 利用者管理 ----------

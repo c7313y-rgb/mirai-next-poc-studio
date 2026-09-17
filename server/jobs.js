@@ -5,6 +5,9 @@ import { config } from './config.js';
 import { ai } from './ai/index.js';
 import { readFile } from './lib/filestore.js';
 import { buildExportDataset, renderExport } from './export.js';
+import { createHash } from 'node:crypto';
+import { keywordConcern } from './lib/safety.js';
+import { normalizeTags } from './lib/taxonomy.js';
 
 const MAX_ATTEMPTS = 3;
 let running = 0;
@@ -15,6 +18,30 @@ export function enqueue(type, payload, delayMs = 0) {
   kick();
 }
 
+const textDigest = (text) => createHash('sha256').update(String(text || '')).digest('hex');
+
+// Keep an open concern until a teacher handles it; a pupil's edit must not erase it.
+function updateConcern(record, concern) {
+  let open = q.one("SELECT id,reason FROM alerts WHERE record_id=? AND kind='concern' AND status='open' ORDER BY id DESC LIMIT 1", record.id);
+  if (concern.flag) {
+    const reason = concern.reason || '要確認の記述';
+    if (open) q.run('UPDATE alerts SET reason=? WHERE id=?', reason, open.id);
+    else q.run("INSERT INTO alerts(school_id,class_id,student_id,record_id,kind,reason) VALUES(?,?,?,?,'concern',?)", record.school_id, record.class_id, record.user_id, record.id, reason);
+    open = { reason };
+  }
+  q.run('UPDATE records SET concern_flag=?,concern_reason=? WHERE id=?', open ? 1 : 0, open?.reason || null, record.id);
+}
+
+export function queueRecordAnalysis(recordId, { preserveTags = false } = {}) {
+  const record = q.one("SELECT * FROM records WHERE id=? AND status='submitted'", recordId);
+  if (!record) return;
+  // The keyword fallback is synchronous, even while the AI provider is unavailable.
+  updateConcern(record, keywordConcern(record.final_text));
+  q.run("UPDATE records SET ai_status='pending',feedback=NULL WHERE id=?", recordId);
+  q.run("UPDATE alerts SET status='auto_resolved',handled_at=? WHERE student_id=? AND kind='inactive' AND status='open'", nowIso(), record.user_id);
+  enqueue('analyze', { recordId, textDigest: textDigest(record.final_text), preserveTags });
+}
+
 const handlers = {
   async ocr({ recordId }) {
     const imgs = q.all('SELECT * FROM record_images WHERE record_id=? ORDER BY id', recordId);
@@ -22,16 +49,18 @@ const handlers = {
     const { text } = await ai().ocr(images);
     q.run("UPDATE records SET ocr_text=?, ocr_status='done' WHERE id=?", text, recordId);
   },
-  async analyze({ recordId }) {
+  async analyze({ recordId, textDigest: expectedDigest, preserveTags = false }) {
     const r = q.one('SELECT r.*, t.title AS theme_title FROM records r LEFT JOIN themes t ON t.id=r.theme_id WHERE r.id=?', recordId);
     if (!r || r.status !== 'submitted') return;
+    if (expectedDigest && expectedDigest !== textDigest(r.final_text)) return;
     const out = await ai().analyze({ text: r.final_text || '', type: r.type, themeTitle: r.theme_title });
-    q.run("UPDATE records SET feedback=?, tags=?, summary=?, concern_flag=?, concern_reason=?, ai_status='done' WHERE id=?",
-      out.feedback, JSON.stringify(out.tags), out.summary, out.concern.flag ? 1 : 0, out.concern.reason, recordId);
-    if (out.concern.flag) {
-      q.run("INSERT INTO alerts(school_id, class_id, student_id, record_id, kind, reason) VALUES(?,?,?,?, 'concern', ?)",
-        r.school_id, r.class_id, r.user_id, r.id, out.concern.reason || '要確認の記述');
-    }
+    const current = q.one('SELECT * FROM records WHERE id=?', recordId);
+    // A response can be edited while a model request is in flight.
+    if (!current || current.final_text !== r.final_text) return;
+    const tags = preserveTags ? normalizeTags([...parseJson(current.tags, []), ...out.tags]) : out.tags;
+    q.run("UPDATE records SET feedback=?, tags=?, summary=?, ai_status='done' WHERE id=?", out.feedback, JSON.stringify(tags), out.summary, recordId);
+    const keyword = keywordConcern(current.final_text);
+    updateConcern(current, out.concern.flag ? out.concern : keyword);
   },
   async export({ exportId }) {
     const ex = q.one('SELECT * FROM exports WHERE id=?', exportId);
@@ -69,16 +98,10 @@ function onFinalFailure(job) {
   const p = parseJson(job.payload, {});
   if (job.type === 'ocr') q.run("UPDATE records SET ocr_status='error' WHERE id=?", p.recordId);
   if (job.type === 'analyze') {
+    const r = q.one('SELECT * FROM records WHERE id=?', p.recordId);
+    if (!r || (p.textDigest && p.textDigest !== textDigest(r.final_text))) return;
     q.run("UPDATE records SET ai_status='error' WHERE id=?", p.recordId);
-    // AI失敗時もキーワード安全網でアラートは出す
-    import('./lib/safety.js').then(({ keywordConcern }) => {
-      const r = q.one('SELECT * FROM records WHERE id=?', p.recordId);
-      const kw = keywordConcern(r?.final_text);
-      if (r && kw.flag) {
-        q.run("UPDATE records SET concern_flag=1, concern_reason=? WHERE id=?", kw.reason, r.id);
-        q.run("INSERT INTO alerts(school_id, class_id, student_id, record_id, kind, reason) VALUES(?,?,?,?, 'concern', ?)", r.school_id, r.class_id, r.user_id, r.id, kw.reason);
-      }
-    });
+    updateConcern(r, keywordConcern(r.final_text));
   }
   if (job.type === 'export') q.run("UPDATE exports SET status='failed', error=? WHERE id=?", 'AI要約または出力に失敗しました', p.exportId);
 }

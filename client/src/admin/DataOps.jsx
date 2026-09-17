@@ -29,8 +29,11 @@ function Exports() {
     <section className="panel stack">
       <h2 style={{ margin: 0 }}>副担任mirAIへの連携データ出力（AD-06）</h2>
       <p className="muted small" style={{ margin: 0 }}>
-        出力するのは要件定義書7.3の10項目（仮名ID・学校コード・学年・記録日・記録種別・テーマID・企業ID・関心タグ・要約・アンケート結果）です。
-        <b>手帳画像・要確認フラグ・利用ログは含みません。</b>PoC中は月1回、この画面から手動でファイルを渡します。
+        標準出力は、仮名ID・学年／クラス・記録日・記録種別・確定した記録テキスト・関心タグ・テーマ関連情報・期間要約を中心に構成します。
+        <b>手帳画像・要確認フラグ・利用ログは含みません。</b>学校・NOLTY・Edutexと受取側で項目、ID対応、受渡方法を確認してから、月次／終了時に出力してください。
+      </p>
+      <p className="notice small" style={{ margin: 0 }}>
+        キャリアの拡張共有プレビューは未合意の項目を含む検討用データです。標準出力とは別に扱い、受取側との合意前に送信しないでください。この画面からのAPI自動送信はありません。
       </p>
       <div className="row" style={{ alignItems: 'flex-end' }}>
         <Field label="対象期間（開始）"><input className="input" type="date" value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} /></Field>

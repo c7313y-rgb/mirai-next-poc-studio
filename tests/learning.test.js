@@ -101,6 +101,10 @@ test('教員編集：独立コピー・最終承認・授業スナップショ�
 
 test('授業：ロール越境と他クラスを拒否し、段階順序を守って進行する', async () => {
   assert.equal((await student.get('/api/learning/lessons')).data.lessons.length, 1);
+  const studentLesson = (await student.get(`/api/learning/lessons/${lesson.id}`)).data.lesson;
+  assert.equal('sourceContent' in studentLesson, false);
+  assert.equal('teacherId' in studentLesson, false);
+  assert.ok(studentLesson.stages.every(s => !('teacherNote' in s)));
   assert.equal((await otherStudent.get('/api/learning/lessons')).data.lessons.length, 0);
   assert.equal((await otherTeacher.get('/api/learning/lessons')).data.lessons.length, 0);
   for (const c of [company, otherTeacher, otherStudent]) {
@@ -112,6 +116,15 @@ test('授業：ロール越境と他クラスを拒否し、段階順序を守�
   }
   assert.equal((await otherStudent.put(`/api/learning/lessons/${lesson.id}/response`, answer)).status, 403);
   assert.equal((await student.put(`/api/learning/lessons/${lesson.id}/response`, answer)).status, 409);
+  assert.equal((await student.put(`/api/learning/lessons/${lesson.id}/baseline`, { before: 0 })).status, 400);
+  assert.equal((await otherStudent.put(`/api/learning/lessons/${lesson.id}/baseline`, { before: 2 })).status, 403);
+  for (let i = 1; i <= 8; i++) {
+    const c = client(env.base);
+    await c.login(`s-aa-0${i}`, 'test-pass-123');
+    assert.equal((await c.put(`/api/learning/lessons/${lesson.id}/baseline`, { before: 2 })).status, 200);
+  }
+  assert.equal((await student.put(`/api/learning/lessons/${lesson.id}/baseline`, { before: 3 })).status, 409);
+  assert.equal((await student.get(`/api/learning/lessons/${lesson.id}`)).data.baseline.source, 'baseline');
   assert.equal((await teacher.post(`/api/learning/lessons/${lesson.id}/progress`, { action: 'next' })).status, 409);
   assert.equal((await teacher.post(`/api/learning/lessons/${lesson.id}/progress`, { action: 'start' })).status, 200);
   assert.equal((await teacher.post(`/api/learning/lessons/${lesson.id}/progress`, { action: 'complete' })).status, 409);
@@ -187,7 +200,10 @@ test('企業集計：5人未満は抑制、複数授業への同一生徒回答�
   await teacher.post(`/api/learning/curricula/${adopted.id}/approve`, {});
   for (let i = 0; i < 4; i++) {
     const l = (await teacher.post('/api/learning/lessons', { curriculumId: adopted.id, classId })).data.lesson;
+    await student.put(`/api/learning/lessons/${l.id}/baseline`, { before: 2 });
     await teacher.post(`/api/learning/lessons/${l.id}/progress`, { action: 'start' });
+    for (let n = 1; n < l.stages.length; n++) await teacher.post(`/api/learning/lessons/${l.id}/progress`, { action: 'next' });
+    await teacher.post(`/api/learning/lessons/${l.id}/progress`, { action: 'complete' });
     await student.put(`/api/learning/lessons/${l.id}/response`, answer);
   }
   report = (await company.get('/api/learning/company-report')).data;
@@ -201,8 +217,14 @@ test('企業集計：5人未満は抑制、複数授業への同一生徒回答�
   assert.equal(report.curricula[0].suppressed, false);
   assert.equal(report.curricula[0].responseCount, 9);
   assert.equal(report.curricula[0].beforeAverage, 2);
-  assert.equal(report.curricula[0].completedLessons, 1);
+  assert.equal(report.curricula[0].completedLessons, 5);
   assert.ok(!JSON.stringify(report).includes('studentId'));
+  const { saveSettings } = await import('../server/settings.js');
+  saveSettings({ school_min_cell: 6 });
+  report = (await company.get('/api/learning/company-report')).data;
+  assert.equal(report.minimumStudents, 6);
+  assert.equal(report.curricula[0].suppressed, true, '運営で設定した同じ少人数閾値を新授業レポートにも適用');
+  saveSettings({ school_min_cell: 5 });
 });
 
 test('入力検証：壊れた段階オブジェクトを400で拒否する', async () => {

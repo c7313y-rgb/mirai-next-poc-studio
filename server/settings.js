@@ -27,6 +27,12 @@ export function getSettings() {
 }
 
 export function saveSettings(patch) {
+  if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('設定の形式が正しくありません');
+  for (const key of ['school_min_cell', 'voice_min_records']) {
+    if (key in patch && (!Number.isInteger(patch[key]) || patch[key] < 3 || patch[key] > 50)) throw new Error('匿名集計の最少人数は3〜50の整数で指定してください');
+  }
+  if ('inactive_days' in patch && (!Number.isInteger(patch.inactive_days) || patch.inactive_days < 1 || patch.inactive_days > 365)) throw new Error('未提出の確認日数は1〜365で指定してください');
+  if ('company_show_school_names' in patch && typeof patch.company_show_school_names !== 'boolean') throw new Error('学校名公開の設定形式が正しくありません');
   const allowed = Object.keys(DEFAULT_SETTINGS);
   for (const [k, v] of Object.entries(patch)) {
     if (!allowed.includes(k)) continue;

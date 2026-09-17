@@ -10,6 +10,8 @@ import {
 import { normalizeTags, INTEREST_TAGS } from '../lib/taxonomy.js';
 import { jstDate, addDays } from '../lib/time.js';
 import { logEvent, audit } from '../lib/log.js';
+import { queueRecordAnalysis } from '../jobs.js';
+import { getSettings } from '../settings.js';
 const r = Router();
 r.use(requireRole('company', 'teacher', 'student', 'admin'));
 const fail = (res, text, status = 400) => res.status(status).json({ error: text });
@@ -20,20 +22,31 @@ const owned = (u, c) =>
     ? !c.teacher_id && c.company_id === u.company_id
     : u.role === 'teacher' && c.teacher_id === u.id);
 const getC = (id) => q.one('SELECT * FROM curricula WHERE id=?', Number(id));
-const lessonDto = (l) => {
+const lessonDto = (l, role = 'teacher') => {
   const c = parseJson(l.snapshot, {});
+  const content = role === 'student' ? {
+    title: c.title,
+    companyName: c.companyName,
+    companyIndustry: c.companyIndustry || q.one('SELECT industry FROM companies WHERE id=?', c.companyId)?.industry || null,
+    audience: c.audience,
+    subject: c.subject,
+    duration: c.duration,
+    objectives: c.objectives,
+    assessment: c.assessment,
+    stages: (c.stages || []).map(({ title, minutes, activity }) => ({ title, minutes, activity })),
+  } : c;
   const cl = q.one(
     'SELECT c.*,s.name school FROM classes c JOIN schools s ON s.id=c.school_id WHERE c.id=?',
     l.class_id,
   );
   return {
-    ...c,
+    ...content,
     id: l.id,
     curriculumId: l.curriculum_id,
     classId: l.class_id,
     className: `${cl.grade}年${cl.name}組`,
     schoolName: cl.school,
-    teacherId: l.teacher_id,
+    ...(role === 'student' ? {} : { teacherId: l.teacher_id }),
     status: l.status,
     stageIndex: l.stage_index,
     scheduledAt: l.scheduled_at,
@@ -63,6 +76,13 @@ const responseDto = (x) =>
         submittedAt: x.submitted_at,
       }
     : null;
+const baselineFor = (lessonId, userId) => {
+  const baseline = q.one('SELECT before_score,submitted_at FROM lesson_baselines WHERE lesson_id=? AND user_id=?', lessonId, userId);
+  if (baseline) return { before: baseline.before_score, submittedAt: baseline.submitted_at, source: 'baseline' };
+  // Preserve old records, but never label their retrospective rating as a true pre-measurement.
+  const legacy = q.one('SELECT before_score,submitted_at FROM lesson_responses WHERE lesson_id=? AND user_id=?', lessonId, userId);
+  return legacy ? { before: legacy.before_score, submittedAt: legacy.submitted_at, source: 'legacy_response' } : null;
+};
 const measurementNote =
   '理解度は生徒による1〜5段階の自己評価です。能力・成績や介入の因果効果を表すものではありません。';
 r.get('/curricula', requireRole('company', 'teacher'), (req, res) => {
@@ -178,7 +198,7 @@ r.get('/lessons', requireRole('teacher', 'student'), (req, res) => {
           `SELECT * FROM lessons WHERE class_id IN (${ids.map(() => '?').join(',')}) ORDER BY id DESC`,
           ...ids,
         )
-        .map(lessonDto)
+        .map((l) => lessonDto(l, req.user.role))
     : [];
   res.json({ lessons });
 });
@@ -221,7 +241,8 @@ r.get('/lessons/:id', requireRole('teacher', 'student'), (req, res) => {
   const l = q.one('SELECT * FROM lessons WHERE id=?', Number(req.params.id));
   if (!canLesson(req.user, l)) return fail(res, '授業を閲覧する権限がありません', 403);
   res.json({
-    lesson: lessonDto(l),
+    lesson: lessonDto(l, req.user.role),
+    baseline: req.user.role === 'student' ? baselineFor(l.id, req.user.id) : null,
     response:
       req.user.role === 'student'
         ? responseDto(
@@ -233,6 +254,22 @@ r.get('/lessons/:id', requireRole('teacher', 'student'), (req, res) => {
           )
         : null,
   });
+});
+r.put('/lessons/:id/baseline', requireRole('student'), (req, res) => {
+  const l = q.one('SELECT * FROM lessons WHERE id=?', Number(req.params.id));
+  if (!canLesson(req.user, l)) return fail(res, '自分のクラスの授業ではありません', 403);
+  const before = req.body?.before;
+  if (!Number.isInteger(before) || before < 1 || before > 5) return fail(res, '授業前の理解度を1〜5から選んでください');
+  const existing = baselineFor(l.id, req.user.id);
+  if (existing) {
+    if (existing.before === before) return res.json({ baseline: existing });
+    return fail(res, '保存済みの授業前の理解度は変更できません', 409);
+  }
+  if (l.status === 'completed' || (l.status === 'active' && l.stage_index > 0))
+    return fail(res, '授業前の理解度は、授業開始前か最初の活動中に保存してください', 409);
+  q.run('INSERT INTO lesson_baselines(lesson_id,user_id,before_score,submitted_at) VALUES(?,?,?,?)', l.id, req.user.id, before, nowIso());
+  logEvent(req.user, 'lesson_baseline', 'lesson', l.id);
+  res.json({ baseline: baselineFor(l.id, req.user.id) });
 });
 r.post('/lessons/:id/progress', requireRole('teacher'), (req, res) => {
   const l = q.one('SELECT * FROM lessons WHERE id=?', Number(req.params.id));
@@ -252,10 +289,13 @@ r.post('/lessons/:id/progress', requireRole('teacher'), (req, res) => {
 r.put('/lessons/:id/response', requireRole('student'), (req, res) => {
   const l = q.one('SELECT * FROM lessons WHERE id=?', Number(req.params.id));
   if (!canLesson(req.user, l)) return fail(res, '自分のクラスの授業ではありません', 403);
-  if (l.status === 'planned') return fail(res, '先生が授業を開始してから提出してください', 409);
+  if (l.status !== 'completed') return fail(res, '先生が授業を終了してから振り返りを提出してください', 409);
+  const baseline = baselineFor(l.id, req.user.id);
+  if (!baseline) return fail(res, '授業前の理解度が保存されていません。この授業の前後比較には参加できません。手帳記録から学びを残してください', 409);
   const b = req.body || {};
   if (
-    ![b.before, b.after].every((v) => Number.isInteger(v) && v >= 1 && v <= 5) ||
+    !Number.isInteger(b.after) || b.after < 1 || b.after > 5 ||
+    (b.before !== undefined && b.before !== baseline.before) ||
     !str(b.learning, 1, 3000) ||
     !str(b.nextAction, 1, 1000) ||
     !Array.isArray(b.interests) ||
@@ -266,7 +306,7 @@ r.put('/lessons/:id/response', requireRole('student'), (req, res) => {
   const tags = JSON.stringify(normalizeTags(b.interests)),
     at = nowIso(),
     snap = parseJson(l.snapshot, {});
-  tx(() => {
+  const recordId = tx(() => {
     const old = q.one(
       'SELECT * FROM lesson_responses WHERE lesson_id=? AND user_id=?',
       l.id,
@@ -285,7 +325,7 @@ r.put('/lessons/:id/response', requireRole('student'), (req, res) => {
     else
       recordId = Number(
         q.run(
-          "INSERT INTO records(user_id,school_id,class_id,type,theme_id,ocr_status,final_text,status,ai_status,tags,summary,submitted_at) VALUES(?,?,?,'theme',?,'none',?,'submitted','none',?,?,?)",
+          "INSERT INTO records(user_id,school_id,class_id,type,theme_id,ocr_status,final_text,status,ai_status,tags,summary,submitted_at) VALUES(?,?,?,'theme',?,'none',?,'submitted','pending',?,?,?)",
           req.user.id,
           req.user.school_id,
           req.user.class_id,
@@ -301,14 +341,16 @@ r.put('/lessons/:id/response', requireRole('student'), (req, res) => {
       l.id,
       req.user.id,
       recordId,
-      b.before,
+      baseline.before,
       b.after,
       b.learning,
       b.nextAction,
       tags,
       at,
     );
+    return recordId;
   });
+  queueRecordAnalysis(recordId, { preserveTags: true });
   logEvent(req.user, 'lesson_reflection', 'lesson', l.id);
   res.json({ ok: true });
 });
@@ -344,6 +386,7 @@ r.get('/lessons/:id/results', requireRole('teacher'), (req, res) => {
   });
 });
 r.get('/company-report', requireRole('company'), (req, res) => {
+  const minimumStudents = getSettings().school_min_cell;
   const curricula = q
     .all('SELECT * FROM curricula WHERE company_id=? AND teacher_id IS NULL', req.user.company_id)
     .map((c) => {
@@ -362,7 +405,7 @@ r.get('/company-report', requireRole('company'), (req, res) => {
           )
         : [];
       const n = rows.length,
-        suppressed = new Set(rows.map((x) => x.user_id)).size < 5;
+        suppressed = new Set(rows.map((x) => x.user_id)).size < minimumStudents;
       const before = n && !suppressed ? rows.reduce((s, x) => s + x.before_score, 0) / n : null,
         after = n && !suppressed ? rows.reduce((s, x) => s + x.after_score, 0) / n : null;
       return {
@@ -378,11 +421,11 @@ r.get('/company-report', requireRole('company'), (req, res) => {
         delta: suppressed ? null : after - before,
       };
     });
-  res.json({ curricula, note: measurementNote + ' 5人未満の回答集計は非表示です。' });
+  res.json({ curricula, minimumStudents, note: measurementNote + ` ${minimumStudents}人未満の回答集計は非表示です。` });
 });
 r.get('/career', requireRole('student'), (req, res) => {
   const records = q.all(
-    "SELECT r.id,r.final_text,r.tags,r.summary,r.submitted_at,r.type,t.title,t.company_id,t.field FROM records r LEFT JOIN themes t ON t.id=r.theme_id WHERE r.user_id=? AND r.status='submitted' ORDER BY r.submitted_at DESC",
+    "SELECT r.id,r.final_text,r.tags,r.summary,r.submitted_at,r.type,t.id theme_id,t.title,t.company_id,t.field,co.industry company_industry FROM records r LEFT JOIN themes t ON t.id=r.theme_id LEFT JOIN companies co ON co.id=t.company_id WHERE r.user_id=? AND r.status='submitted' ORDER BY r.submitted_at DESC",
     req.user.id,
   );
   const tags = {};
@@ -400,7 +443,7 @@ r.get('/career', requireRole('student'), (req, res) => {
   const school = q.one('SELECT code FROM schools WHERE id=?', req.user.school_id);
   const cl = q.one('SELECT * FROM classes WHERE id=?', req.user.class_id);
   const payload = {
-    schemaVersion: 'mirai-next-career-preview/1.0',
+    schemaVersion: 'mirai-next-career-preview/1.1',
     pseudoId: req.user.pseudo_id,
     schoolCode: school.code,
     gradeClass: `${cl.grade}年${cl.name}組`,
@@ -410,11 +453,14 @@ r.get('/career', requireRole('student'), (req, res) => {
       recordType: x.type,
       recordText: x.final_text,
       interestTags: parseJson(x.tags, []),
-      theme: x.title || null,
+      themeId: x.theme_id || null,
+      themeTitle: x.title || null,
       companyId: x.company_id || null,
-      periodSummary: x.summary || '',
+      companyIndustry: x.company_industry || null,
+      subject: x.field || null,
+      recordSummary: x.summary || '',
     })),
-    learningReflections: experiences,
+    periodSummary: records.map((x) => x.summary).filter(Boolean).join(' / '),
   };
   res.json({
     profile: {
@@ -436,12 +482,11 @@ r.get('/career', requireRole('student'), (req, res) => {
         '本人が確認した記録テキスト',
         '記録日・種類',
         '関心タグ',
-        '探究テーマ・企業ID',
+        '探究テーマ・企業ID・企業の業種分野',
         '振り返り要約',
-        '学習振り返り（拡張項目）',
       ],
-      excluded: ['撮影画像', '要確認フラグ', '利用ログ', '氏名'],
-      note: '副担任mirAIへの共有予定データです。接続先の取込仕様確定前のため、外部送信・取込確認は行っていません。学習振り返りは追加提案項目です。',
+      excluded: ['撮影画像', '要確認フラグ', '利用ログ', '氏名', 'アンケート回答・自由記述'],
+      note: '副担任mirAIへの共有予定データです。接続先の取込仕様確定前のため、外部送信・取込確認は行っていません。このプレビューの期間要約は記録要約の連結です。正式出力時に期間要約を作成します。',
       payload,
     },
   });

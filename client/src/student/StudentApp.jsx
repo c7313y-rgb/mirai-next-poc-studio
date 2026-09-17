@@ -74,7 +74,7 @@ export default function StudentApp({ user, route, onLogout }) {
   else if (path === '/records') page = <Records onLogout={onLogout} user={user} />;
   else if (path === '/surveys') page = <SurveyList />;
   else if ((m = match('/surveys/:id', path))) page = <SurveyAnswer id={m.id} />;
-  else if (path === '/lessons') page = <LessonWorkspace role="student" />;
+  else if (path === '/lessons') page = <LessonWorkspace role="student" user={user} />;
   else if (path === '/career') page = <Career />;
   else if (path === '/journal') page = <Home user={user} />;
   else page = <Overview user={user} />;

@@ -1,6 +1,7 @@
 import { config } from '../config.js';
 import { keywordConcern } from '../lib/safety.js';
 import { normalizeTags } from '../lib/taxonomy.js';
+import { sendWithAiBudget } from '../lib/ai-budget.js';
 import { OCR_PROMPT, analyzePrompt, voicePrompt, periodSummaryPrompt, freeTextPrompt, worksheetPrompt, extractJson } from './prompts.js';
 
 // ---- 送信層（Bedrock / Anthropic API）----
@@ -28,7 +29,8 @@ async function sendBedrock({ model, prompt, images = [], maxTokens = 1500 }) {
   } catch {
     throw new Error('@aws-sdk/client-bedrock-runtime が未インストールです（npm install で導入されます）');
   }
-  bedrockClient ||= new sdk.BedrockRuntimeClient({ region: config.ai.awsRegion });
+  // The worker owns retries; SDK retries would evade the per-attempt reservation.
+  bedrockClient ||= new sdk.BedrockRuntimeClient({ region: config.ai.awsRegion, maxAttempts: 1 });
   const fmt = (mime) => ({ 'image/jpeg': 'jpeg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }[mime] || 'jpeg');
   const content = [
     ...images.map((img) => ({ image: { format: fmt(img.mime), source: { bytes: img.buffer } } })),
@@ -43,7 +45,8 @@ async function sendBedrock({ model, prompt, images = [], maxTokens = 1500 }) {
 }
 
 function makeLlmProvider(kind) {
-  const send = kind === 'bedrock' ? sendBedrock : sendAnthropic;
+  const transport = kind === 'bedrock' ? sendBedrock : sendAnthropic;
+  const send = (request) => sendWithAiBudget(transport, request);
   const models = kind === 'bedrock'
     ? { ocr: config.ai.bedrockModelOcr, text: config.ai.bedrockModelText }
     : { ocr: config.ai.anthropicModelOcr, text: config.ai.anthropicModelText };

@@ -1,4 +1,5 @@
 import multer from 'multer';
+import sharp from 'sharp';
 import { config } from '../config.js';
 
 export const uploadImages = multer({
@@ -12,4 +13,15 @@ export function sniffImage(buf) {
   if (buf.length > 8 && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
   if (buf.length > 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') return 'image/webp';
   return null;
+}
+
+// Direct API uploads pass the same decode/resize/metadata removal as camera images.
+// Re-encoding also rejects files that merely imitate a supported magic header.
+export async function sanitizeImage(buffer) {
+  if (!sniffImage(buffer)) throw new Error('unsupported image');
+  const image = sharp(buffer, { limitInputPixels: 24_000_000, failOn: 'warning', animated: false });
+  const metadata = await image.metadata();
+  if (!metadata.width || !metadata.height || (metadata.pages || 1) > 1) throw new Error('invalid image');
+  const data = await image.rotate().resize({ width: 2000, height: 2000, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 88 }).toBuffer();
+  return { buffer: data, size: data.length, mime: 'image/jpeg' };
 }

@@ -1,0 +1,54 @@
+services:
+  app:
+    build: .
+    image: mirai-next-poc:local
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      DEMO_MODE: "false"
+      DATA_DIR: /app/data
+      BACKUP_DIR: /app/backups
+      TRUST_PROXY_HOPS: "1"
+    expose: ["3000"]
+    volumes:
+      - app_data:/app/data
+      - backups:/app/backups
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+  gateway:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN to the production hostname}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+  backup:
+    image: mirai-next-poc:local
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      DATA_DIR: /app/data
+      BACKUP_DIR: /app/backups
+    command: ["sh", "-c", "while true; do node --disable-warning=ExperimentalWarning scripts/backup.js; sleep 86400; done"]
+    volumes:
+      - app_data:/app/data:ro
+      - backups:/app/backups
+    depends_on:
+      app:
+        condition: service_healthy
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    healthcheck:
+      disable: true
+volumes:
+  app_data:
+  backups:
+  caddy_data:
+  caddy_config:

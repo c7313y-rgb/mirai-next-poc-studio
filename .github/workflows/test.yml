@@ -14,10 +14,26 @@ jobs:
         with:
           node-version: '22.x'
       - name: サーバー依存関係
-        run: npm ci --omit=optional
+        run: npm ci --include=optional
       - name: 結合テスト
         run: npm test
       - name: クライアント依存関係
         run: npm --prefix client ci
       - name: クライアントのビルド
         run: npm --prefix client run build
+      - name: 本番イメージのビルド
+        run: docker build -t mirai-next:test .
+      - name: 実AI依存と非root実行の確認
+        run: docker run --rm --entrypoint node mirai-next:test --input-type=module -e "await import('@aws-sdk/client-bedrock-runtime'); await import('sharp'); if (process.getuid() === 0) throw new Error('root execution');"
+      - name: コンテナ起動とヘルスチェック
+        run: |
+          docker run -d --name mirai-smoke -e NODE_ENV=development -e AI_PROVIDER=mock -e DEMO_MODE=false -p 127.0.0.1:3001:3000 mirai-next:test
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl --fail --silent http://127.0.0.1:3001/api/health; then exit 0; fi
+            sleep 2
+          done
+          docker logs mirai-smoke
+          exit 1
+      - name: 検証コンテナの終了
+        if: always()
+        run: docker rm -f mirai-smoke || true

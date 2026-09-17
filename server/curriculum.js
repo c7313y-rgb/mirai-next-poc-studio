@@ -7,6 +7,8 @@ export function curriculumDto(c) {
     companyId: c.company_id,
     companyName:
       c.company_name || q.one('SELECT name FROM companies WHERE id=?', c.company_id)?.name,
+    companyIndustry:
+      c.company_industry || q.one('SELECT industry FROM companies WHERE id=?', c.company_id)?.industry || null,
     sourceId: c.source_id,
     themeId: c.theme_id,
     teacherId: c.teacher_id,
