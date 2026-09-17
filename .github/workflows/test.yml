@@ -1,0 +1,23 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: サーバー依存関係
+        run: npm ci --omit=optional
+      - name: 結合テスト
+        run: npm test
+      - name: クライアント依存関係
+        run: npm --prefix client ci
+      - name: クライアントのビルド
+        run: npm --prefix client run build

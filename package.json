@@ -1,0 +1,33 @@
+{
+  "name": "mirai-next-poc-studio",
+  "version": "0.2.0",
+  "private": true,
+  "description": "企業の知見を授業へ、学びをキャリアへつなぐ副担任mirAI NEXT PoC",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "setup": "npm ci && npm --prefix client ci",
+    "build": "node scripts/build.js",
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch server/index.js",
+    "dev:client": "npm --prefix client run dev",
+    "seed:demo": "node --disable-warning=ExperimentalWarning scripts/seed-demo.js",
+    "create-admin": "node --disable-warning=ExperimentalWarning scripts/create-admin.js",
+    "backup": "node --disable-warning=ExperimentalWarning scripts/backup.js",
+    "purge": "node --disable-warning=ExperimentalWarning scripts/purge.js",
+    "test": "node --disable-warning=ExperimentalWarning --test tests/*.test.js",
+    "demo": "node scripts/demo.js",
+    "seed:learning": "node --disable-warning=ExperimentalWarning scripts/seed-learning.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "multer": "^2.0.2",
+    "qrcode": "^1.5.4"
+  },
+  "optionalDependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.700.0"
+  },
+  "license": "UNLICENSED"
+}

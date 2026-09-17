@@ -1,0 +1,35 @@
+import { q, parseJson, nowIso } from './db.js';
+
+export function curriculumDto(c) {
+  if (!c) return null;
+  return { id:c.id, companyId:c.company_id, companyName:c.company_name || q.one('SELECT name FROM companies WHERE id=?',c.company_id)?.name,
+    sourceId:c.source_id, themeId:c.theme_id, teacherId:c.teacher_id, schoolId:c.school_id, title:c.title, sourceContent:c.source_content,
+    audience:c.audience, subject:c.subject, duration:c.duration, objectives:parseJson(c.objectives,[]), stages:parseJson(c.stages,[]),
+    assessment:c.assessment, status:c.status, generatedBy:c.generated_by, updatedAt:c.updated_at };
+}
+export function generateCurriculum({title,sourceContent,audience,subject,duration}) {
+  const excerpt=sourceContent.trim().slice(0,700);
+  const multiple=duration/50;
+  return { title,sourceContent,audience,subject,duration,
+    objectives:[`${title}について、企業が直面する課題と制約を自分の言葉で説明する。`,'複数の立場から解決策を考え、根拠をもって提案する。','学びと自分の関心を結びつけ、次に試す行動を決める。'],
+    stages:[
+      {title:'出会う・問いを持つ',minutes:5*multiple,activity:`「${title}」から、どんな社会の課題を想像しますか。授業前の理解度を1〜5で振り返りましょう。`,teacherNote:'正解を求めず、最初の考えを短い言葉で書かせる。'},
+      {title:'企業の現場を知る',minutes:10*multiple,activity:`企業からのコンテンツを読み、事実・課題・制約を分けて整理しましょう。\n\n${excerpt}`,teacherNote:'これは企業入力をもとにした草案です。公開できる情報と事実関係を確認する。'},
+      {title:'対話して、解決策をつくる',minutes:20*multiple,activity:`「${title}」について、誰のどんな困りごとを解決するか決め、2つの案を比較しましょう。費用・時間・環境への影響のうち、重視する条件を選んでください。`,teacherNote:'役割を分け、根拠と反対意見も記録させる。'},
+      {title:'伝える・問い直す',minutes:10*multiple,activity:'提案と根拠を1分で伝え、他のグループから質問をもらいましょう。質問を受けて案を1点改善します。',teacherNote:'発言量だけで評価せず、観察・記録・質問も学習の証拠として扱う。'},
+      {title:'自分の未来につなげる',minutes:5*multiple,activity:'授業後の理解度、今日の発見、関心を持った分野、次に試す小さな行動を記録しましょう。',teacherNote:'自己評価の変化を成績や職業適性と断定しない。'}
+    ],assessment:'課題理解：事実と意見を区別できたか／根拠：理由を示して比較したか／協働：他者の視点を取り入れたか／振り返り：学びと次の行動を具体化したか。各観点を「これから・取り組めた・深められた」で対話的に確認する。' };
+}
+export function insertCurriculum(c, companyId, extra={}) {
+  const result=q.run(`INSERT INTO curricula(company_id,source_id,theme_id,teacher_id,school_id,title,source_content,audience,subject,duration,objectives,stages,assessment,status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, companyId,extra.sourceId||null,extra.themeId||null,extra.teacherId||null,extra.schoolId||null,c.title,c.sourceContent,c.audience,c.subject,c.duration,JSON.stringify(c.objectives),JSON.stringify(c.stages),c.assessment,extra.status||'draft');
+  return curriculumDto(q.one('SELECT * FROM curricula WHERE id=?',Number(result.lastInsertRowid)));
+}
+export function publishCurriculum(id) {
+  const c=q.one('SELECT * FROM curricula WHERE id=?',id);
+  const dto=curriculumDto(c); let themeId=c.theme_id;
+  const params=[c.title,c.source_content.slice(0,2000),JSON.stringify(dto.stages.map(s=>s.activity)),c.assessment,c.subject,nowIso()];
+  if(themeId) q.run("UPDATE themes SET title=?,summary=?,questions=?,worksheet=?,field=?,updated_at=?,status='published' WHERE id=?",...params,themeId);
+  else themeId=Number(q.run("INSERT INTO themes(title,summary,questions,worksheet,field,published_at,company_id,status) VALUES(?,?,?,?,?,?,?,'published')",...params,c.company_id).lastInsertRowid);
+  q.run("UPDATE curricula SET status='published',theme_id=?,updated_at=? WHERE id=?",themeId,nowIso(),id);
+  return curriculumDto(q.one('SELECT * FROM curricula WHERE id=?',id));
+}

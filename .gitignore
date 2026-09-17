@@ -1,0 +1,19 @@
+node_modules/
+client/node_modules/
+client/dist/
+/data/*
+!/data/.gitkeep
+.env
+*.log
+backups/
+exports/
+.DS_Store
+/tmp/
+
+/data-demo/
+.env.*
+!.env.example
+output/
+
+# Legacy presentation generator (not part of the application)
+scripts/make-slides.js
