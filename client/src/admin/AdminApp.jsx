@@ -26,5 +26,9 @@ export default function AdminApp({ user, route, onLogout }) {
   else if (path.startsWith('/settings')) page = <Settings />;
   else page = <Kpi />;
 
-  return <Shell user={user} route={route} onLogout={onLogout} nav={NAV}>{page}</Shell>;
+  return (
+    <Shell user={user} route={route} onLogout={onLogout} nav={NAV}>
+      {page}
+    </Shell>
+  );
 }
