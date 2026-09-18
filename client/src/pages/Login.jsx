@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { ErrorBox, Field, Loading, useApi } from '../ui.jsx';
+import { Link } from '../router.jsx';
 const roles = [
   {
     id: 'company',
@@ -77,6 +78,10 @@ export default function Login({ onLogin }) {
           企業の知見と学校の学びをつなぎ、一人ひとりの「気になる」を育てる。
           <br />
           企業・教員・生徒、あなたの画面からはじめましょう。
+        </p>
+        <p className="sd-login-note">
+          デジタルで気づき、現場で出会い、手帳と先生との対話で、自分の選択へ。
+          <Link to="/about" className="sd-inline-link">このサービスが大切にしていること →</Link>
         </p>
       </div>
       <div className="portal-main">
@@ -200,6 +205,7 @@ export default function Login({ onLogin }) {
       </div>
       <footer className="portal-footer">
         <span>© mirAI NEXT · EDUCATION × CAREER</span>
+        <Link to="/about" className="sd-footer-link">学びの設計思想</Link>
         <span>PoCデモには、実在する生徒の個人情報を入力しないでください。</span>
       </footer>
     </main>

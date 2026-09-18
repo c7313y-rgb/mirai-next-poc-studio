@@ -1,0 +1,108 @@
+.sd-page { color: #243b48; background: #fbfcfa; min-height: 100vh; overflow-wrap: anywhere; }
+.sd-page *, .sd-role-note, .sd-role-note > * { min-width: 0; }
+.sd-topbar, .sd-main, .sd-footer { width: min(1120px, calc(100% - 64px)); margin-inline: auto; }
+.sd-topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 94px; padding-block: 18px; }
+.sd-topbar .logo { color: #293f4b; }
+.sd-page .sd-entry { font-size: 13px; }
+.sd-hero { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr); gap: 44px; align-items: center; padding: 48px 0 56px; }
+.sd-page .sd-eyebrow { color: #526951; font-size: 11px; font-weight: 700; line-height: 1.7; letter-spacing: 1.7px; margin: 0 0 13px; }
+.sd-page h1 { font-size: clamp(30px, 3.7vw, 46px); line-height: 1.5; letter-spacing: -.035em; margin: 0 0 20px; font-weight: 700; }
+.sd-page h2 { color: #253e47; font-size: clamp(23px, 2.3vw, 30px); line-height: 1.6; margin: 0 0 15px; }
+.sd-page h3 { color: #2a474d; font-size: 18px; line-height: 1.6; margin: 15px 0 10px; }
+.sd-page p { color: #52646a; font-size: 15px; line-height: 1.95; }
+.sd-page .sd-lead { color: #36514c; font-size: 17px; font-weight: 700; }
+.sd-promise { border-left: 3px solid #729581; padding: 4px 0 4px 17px; margin-top: 25px; }
+.sd-promise b, .sd-promise span { display: block; line-height: 1.8; }
+.sd-promise b { font-size: 15px; }
+.sd-promise span { margin-top: 8px; font-size: 13px; color: #52646a; }
+.sd-scene { margin: 0; position: relative; border-radius: 20px; overflow: hidden; background: #e4e9dc; }
+.sd-scene img { width: 100%; height: auto; display: block; object-fit: cover; aspect-ratio: 3 / 2; }
+.sd-hero .sd-scene img { aspect-ratio: 4 / 5; object-position: 53% center; }
+.sd-scene figcaption { background: #eaf0e8; padding: 11px 15px; color: #3d5553; font-size: 12px; line-height: 1.7; }
+.sd-scene figcaption span { display: block; font-size: 10px; margin-top: 3px; color: #5b6c65; }
+.sd-section { padding: 50px 0; border-top: 1px solid #dde4dc; }
+.sd-section-heading { max-width: 800px; margin-bottom: 27px; }
+.sd-section-heading > p:last-child { margin-bottom: 0; }
+.sd-cycle { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; list-style: none; padding: 0; margin: 0 0 26px; }
+.sd-cycle li { background: #edf2eb; border-radius: 8px; padding: 12px 8px; text-align: center; font-size: 12px; font-weight: 700; line-height: 1.7; color: #38544a; }
+.sd-cycle li:not(:last-child)::after { content: ' →'; color: #75876e; }
+.sd-steps { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.sd-steps > li { padding: 28px; border: 1px solid #dae4d9; border-radius: 16px; background: white; display: flex; flex-direction: column; }
+.sd-step-label { display: flex; gap: 14px; align-items: center; color: #52745c; }
+.sd-step-label > span { font-size: 29px; font-weight: 500; line-height: 1.2; }
+.sd-step-label > b { font-size: 13px; line-height: 1.7; }
+.sd-steps > li > p { font-size: 14px; margin: 0 0 20px; }
+.sd-steps > li > .sd-practice { border-top: 1px solid #e5eae2; padding-top: 14px; margin: auto 0 0; font-size: 12px; color: #556b59; }
+.sd-practice span { display: block; font-size: 10px; letter-spacing: .6px; margin-bottom: 5px; font-weight: 700; }
+.sd-scene-grid, .sd-years, .sd-scope-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; }
+.sd-scene-grid article > p { margin-bottom: 0; font-size: 14px; }
+.sd-page .sd-caption { color: #647265; font-size: 11px; margin: 22px 0 0; }
+.sd-role-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.sd-role-grid article { border-left: 2px solid #bdcdb7; padding-left: 20px; }
+.sd-role-label { display: inline-block; color: #3f6058; font-size: 12px; font-weight: 700; background: #eaf1e7; border-radius: 6px; padding: 5px 11px; }
+.sd-role-grid p { font-size: 14px; margin-bottom: 0; }
+.sd-years { gap: 0; border: 1px solid #d5dfd1; border-radius: 16px; overflow: hidden; }
+.sd-years article { padding: 28px; background: #eef3e9; }
+.sd-years article + article { background: #f6f5eb; border-left: 1px solid #d5dfd1; }
+.sd-years article > span { font-size: 13px; font-weight: 700; color: #61794e; }
+.sd-years p { font-size: 14px; margin-bottom: 0; }
+.sd-page .sd-future-note { font-size: 12px; margin-top: 18px; }
+.sd-scope-grid article { background: #f1f4f1; border-radius: 12px; padding: 24px; }
+.sd-scope-grid article h3 { margin-top: 0; font-size: 17px; }
+.sd-scope-grid ul { padding-left: 1.3em; margin: 0; font-size: 13px; line-height: 1.9; color: #52646a; }
+.sd-scope-grid li + li { margin-top: 12px; }
+.sd-details { border: 1px solid #dce4d9; background: white; border-radius: 12px; margin-top: 22px; padding: 0 22px; }
+.sd-details summary { cursor: pointer; padding: 20px 0; line-height: 1.7; color: #3c5951; font-size: 14px; font-weight: 700; }
+.sd-details p { font-size: 13px; }
+.sd-details > div { padding-bottom: 10px; }
+.sd-close { border-top: 1px solid #dde4dc; text-align: center; padding: 54px 0 64px; }
+.sd-close .btn { margin-top: 10px; }
+.sd-footer { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 24px 0; border-top: 1px solid #dde4dc; font-size: 12px; color: #677970; }
+.portal .sd-login-note { margin: 10px 0 0; color: #4b625b; font-size: 12px; line-height: 1.9; }
+.sd-inline-link, .sd-footer-link { display: inline-flex; align-items: center; color: #3d6156; text-decoration: underline; text-underline-offset: 4px; line-height: 1.6; }
+.sd-inline-link { margin-left: 12px; min-height: 32px; }
+.workspace-footer .sd-footer-link, .portal-footer .sd-footer-link { font-size: 12px; min-height: 36px; }
+.sd-role-note { border: 1px solid #dbe5d7; background: #f0f4ed; border-radius: 13px; padding: 22px 26px; display: flex; align-items: center; justify-content: space-between; gap: 26px; }
+.sd-role-note .sd-role-note-label { font-size: 10px; color: #61795d; letter-spacing: 1px; font-weight: 700; }
+.sd-role-note h3 { color: #395347; margin: 8px 0; font-size: 16px; line-height: 1.7; }
+.sd-role-note p { color: #586e62; margin: 0; max-width: 700px; font-size: 13px; line-height: 1.8; }
+.sd-role-note .sd-footer-link { flex: 0 0 auto; font-size: 12px; min-height: 44px; }
+@media (max-width: 900px) {
+  .sd-hero { gap: 25px; }
+  .sd-topbar, .sd-main, .sd-footer { width: calc(100% - 40px); }
+  .sd-page h1 { font-size: 33px; }
+  .sd-role-grid { gap: 16px; }
+  .sd-role-grid article { padding-left: 13px; }
+  .sd-role-note { flex-wrap: wrap; gap: 10px; }
+  .sd-cycle { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 650px) {
+  .sd-topbar, .sd-main, .sd-footer { width: calc(100% - 32px); }
+  .sd-topbar { min-height: 80px; gap: 12px; }
+  .sd-topbar .logo { font-size: 17px; gap: 8px; }
+  .sd-topbar .logo .logo-mark { width: 31px; height: 35px; font-size: 24px; }
+  .sd-topbar .logo small { font-size: 8px; }
+  .sd-page .sd-entry { padding: 10px 12px; font-size: 11px; max-width: 145px; }
+  .sd-hero { grid-template-columns: minmax(0, 1fr); padding: 26px 0 35px; gap: 25px; }
+  .sd-page h1 { font-size: clamp(26px, 7vw, 33px); }
+  .sd-hero .sd-scene img { aspect-ratio: 3 / 2; object-position: center 48%; }
+  .sd-page p { font-size: 14px; }
+  .sd-page .sd-lead { font-size: 15px; }
+  .sd-section { padding: 34px 0; }
+  .sd-steps, .sd-scene-grid, .sd-role-grid, .sd-years, .sd-scope-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .sd-cycle { gap: 6px; }
+  .sd-cycle li { font-size: 11px; padding: 11px 6px; }
+  .sd-steps > li { padding: 22px; }
+  .sd-years { gap: 0; }
+  .sd-years article { padding: 22px; }
+  .sd-years article + article { border-left: 0; border-top: 1px solid #d5dfd1; }
+  .sd-role-grid { gap: 24px; }
+  .sd-scope-grid article { padding: 22px; }
+  .sd-details { padding-inline: 18px; }
+  .sd-close { padding: 35px 0; }
+  .sd-page .sd-footer { font-size: 11px; gap: 9px; }
+  .portal .sd-login-note { font-size: 12px; margin-top: 8px; }
+  .sd-inline-link { margin-left: 0; padding-inline: 10px; min-height: 36px; }
+  .sd-role-note { padding: 20px; }
+  .sd-role-note h3 { font-size: 15px; }
+}

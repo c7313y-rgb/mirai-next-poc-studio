@@ -102,6 +102,7 @@ export default function Shell({ user, route, onLogout, nav, children }) {
         </main>
         <footer className="workspace-footer">
           mirAI NEXT <span>企業と学校と、一人ひとりの未来をつなぐ。</span>
+          <Link to="/about" className="sd-footer-link">学びの設計思想 →</Link>
         </footer>
       </div>
     </div>

@@ -35,7 +35,7 @@ export function createApp() {
   app.use(express.json({ limit: '2mb' }));
   app.use(loadUser);
 
-  app.get('/api/health', (req, res) => res.json({ ok: true, ai: ai().name }));
+  app.get('/api/health', (req, res) => res.json({ ok: true, service: 'mirai-next-poc-studio', ai: ai().name }));
   app.use('/api', csrfGuard);
   app.use('/api', (req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
   app.use('/api/auth', authRoutes);

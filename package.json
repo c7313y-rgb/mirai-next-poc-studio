@@ -1,6 +1,6 @@
 {
   "name": "mirai-next-poc-studio",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "description": "企業の知見を授業へ、学びをキャリアへつなぐ副担任mirAI NEXT PoC",
   "type": "module",
@@ -11,6 +11,9 @@
     "setup": "npm ci && npm --prefix client ci",
     "build": "node scripts/build.js",
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "local:start": "node scripts/local-demo.mjs start",
+    "local:status": "node scripts/local-demo.mjs status",
+    "local:stop": "node scripts/local-demo.mjs stop",
     "dev": "node --disable-warning=ExperimentalWarning --watch server/index.js",
     "dev:client": "npm --prefix client run dev",
     "seed:demo": "node --disable-warning=ExperimentalWarning scripts/seed-demo.js",

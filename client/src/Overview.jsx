@@ -9,6 +9,8 @@ const M = {
     body: '仕事の現場にある問いが、生徒の探究のはじまりになる。',
     cta: 'カリキュラムをつくる',
     path: '/curriculum',
+    approachTitle: '仕事の知見を、社会を知る入口へ。',
+    approachText: '企業の問いを教員と教材にし、生徒の学びを支える。広い社会学習から現場での体験、手帳での内省へつなぐ設計です。',
   },
   teacher: {
     eyebrow: 'TEACHER HOME',
@@ -16,6 +18,8 @@ const M = {
     body: '企業のリアルな課題を教材に、一人ひとりの気づきに伴走しましょう。',
     cta: '授業を確認する',
     path: '/lessons',
+    approachTitle: '手帳と対話で、生徒自身の選択を支える。',
+    approachText: '企業テーマや現場での経験を、自分の言葉で考える材料に。先生の最終編集と対話を、生徒の自己決定につなげます。',
   },
   student: {
     eyebrow: 'MY LEARNING',
@@ -23,6 +27,8 @@ const M = {
     body: '社会を知ることは、自分を知ること。小さな発見を記録していこう。',
     cta: '今日の授業へ',
     path: '/lessons',
+    approachTitle: '「気になる」を試して、自分の言葉にしよう。',
+    approachText: '社会の問いに出会い、体験して、手帳に書き戻す。先生と話しながら、次の一歩を自分で選んでいこう。',
   },
 };
 export default function Overview({ user }) {
@@ -211,20 +217,13 @@ export default function Overview({ user }) {
           ))}
         </section>
       </div>
-      <section className="journey-banner">
+      <section className="sd-role-note" aria-label="このサービスが大切にしていること">
         <div>
-          <span className="eyebrow">THE LEARNING CYCLE</span>
-          <h3>気づきを、体験へ。体験を、自分の選択へ。</h3>
+          <span className="sd-role-note-label">このサービスが大切にしていること</span>
+          <h3>{m.approachTitle}</h3>
+          <p>{m.approachText}</p>
         </div>
-        <div>
-          <span>01 気づく</span>
-          <b>→</b>
-          <span>02 関心を探す</span>
-          <b>→</b>
-          <span>03 越境する</span>
-          <b>→</b>
-          <span>04 深めて選ぶ</span>
-        </div>
+        <Link to="/about" className="sd-footer-link">学びの設計思想を見る →</Link>
       </section>
     </div>
   );

@@ -8,12 +8,14 @@ import StudentApp from './student/StudentApp.jsx';
 import TeacherApp from './teacher/TeacherApp.jsx';
 import CompanyApp from './company/CompanyApp.jsx';
 import AdminApp from './admin/AdminApp.jsx';
+import ServiceDesign from './pages/ServiceDesign.jsx';
 
 export default function App() {
   const route = useRoute();
   const [user, setUser] = useState(undefined);
 
   useEffect(() => { api.get('/auth/me').then((d) => setUser(d.user)).catch(() => setUser(null)); }, []);
+  useEffect(() => { window.scrollTo(0, 0); }, [user?.id]);
   useEffect(() => {
     const on = () => setUser(null);
     window.addEventListener('mn:unauthorized', on);
@@ -22,6 +24,7 @@ export default function App() {
 
   const logout = async () => { await api.post('/auth/logout').catch(() => {}); setUser(null); go('/'); };
 
+  if (route.path === '/about' || route.path === '/approach') return <ServiceDesign user={user} />;
   if (route.path.startsWith('/qr/')) return <QrLogin token={route.path.slice(4)} onLogin={(u) => { setUser(u); window.history.replaceState(null, '', '#/'); go('/'); }} />;
   if (user === undefined) return <Loading />;
   if (!user) return <Login onLogin={(u) => { setUser(u); go('/'); }} />;

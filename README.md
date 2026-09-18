@@ -27,6 +27,12 @@ npm run demo
 
 進行中・予定・完了のサンプル授業があるため、途中からの体験も可能です。1台で役割を切り替える場合はログアウトしてください。同じブラウザ内のタブはログインセッションを共有します。
 
+### 設定済みのMacで、次回から開く
+
+`.env`・ビルド・保存済みDBがあるローカルデモでは、Finderから `scripts/start-local-demo.command` をダブルクリックしてください。サーバーの起動を確認してからブラウザーを開きます。ターミナルを閉じてもサーバーは動作します。Macを再起動した場合はもう一度このファイルを開いてください。URLやHTMLのリンクだけではサーバーは起動しません。
+
+`npm run local:start`、`npm run local:status`、`npm run local:stop` でも操作できます。既存の `.env` とDBを使い、データを初期化しません。`npm run demo` の `data-demo/` を使う場合は、その保存先を `.env` の `DATA_DIR` に指定してください。設定・エラー時の確認方法は [ローカル起動の手順](docs/LOCAL-DEMO.md) を参照してください。
+
 ## 実装した機能
 
 | 画面 | 主な機能 |
@@ -89,6 +95,7 @@ npm start
 - [デモと実運用の切替](docs/OPERATIONS.md)
 - [画像の出典と生成方法](docs/ASSETS.md)
 - [追加構想への対応と実装の範囲](docs/DIRECTION-V2.md)
+- [学びの設計思想と公開ページ](docs/SERVICE-DESIGN.md)
 
 UIと導線は以前の [mirAI NEXT PoC](https://mirai-next-poc.changyaokuang.chatgpt.site/) の教材化・自校編集・匿名分析を参考にしています。添付資料の個人情報・契約情報・原本はこのリポジトリに含めていません。
 
@@ -110,3 +117,9 @@ UIと導線は以前の [mirAI NEXT PoC](https://mirai-next-poc.changyaokuang.ch
 
 - [変更内容・検証・更新時の扱い](docs/RELEASE-0.4.0.md)
 - [教材設計と学習指導要領の参照範囲](docs/CURRICULUM-GUIDANCE.md)
+
+## 0.4.1 の起動改善とサービス設計思想
+
+ローカルサーバーの起動確認・継続動作・二重起動防止・状態確認・停止を行うMac用ランチャーを追加しました。未ログインでも `#/about` から、デジタルの気づき、企業テーマ、越境体験、紙の手帳と教員との対話を通した本人の自己決定という設計思想を確認できます。ログイン画面と各役割ホームからも案内します。
+
+- [変更内容と検証](docs/RELEASE-0.4.1.md)
