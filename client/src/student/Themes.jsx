@@ -3,25 +3,44 @@ import { api } from '../api.js';
 import { Link } from '../router.jsx';
 import { useApi, Loading, ErrorBox, useToast } from '../ui.jsx';
 import { StudentHead } from './StudentApp.jsx';
+import { LearningHeader } from '../learning/LearningUI.jsx';
+import { sceneForTheme } from '../learning/scenes.js';
+import '../learning/discovery.css';
 
 export function ThemeList() {
   const { data, error, loading, reload } = useApi('/student/home');
+  const [query, setQuery] = useState('');
+  const [order, setOrder] = useState('interest');
+  const all = order === 'interest' ? (data?.recommendations?.themes || data?.themes || []) : (data?.themes || []);
+  const visible = all.filter(t => `${t.title} ${t.summary} ${t.companyName} ${t.field || ''}`.includes(query.trim()));
   return (
-    <>
-      <StudentHead title="探究テーマ"><p className="muted small" style={{ margin: 0 }}>企業から届いた、社会のリアルな問いです。</p></StudentHead>
-      <main className="student-main">
+    <div className="stack lr-page">
+      <LearningHeader eyebrow="DISCOVER / CONTENT LIBRARY" title="まだ知らない世界に、問いをひらく。" description="記録に残した関心から探す。いつもと違う分野を選ぶ。あなたの視点で、社会の問いと出会いましょう。" imageSrc="/images/fieldwork-v2.webp" imageAlt="地域の農家と対話する生徒と教員の架空の越境学習シーン" imageNote="AI生成イメージ" />
+      <section className="panel stack">
+        <div className="spread lr-wrap">
+          <div><h2>学校から届いたテーマ</h2><p className="muted small">関心順は直近最大100件の提出記録にあるタグとテーマの内容を照合しています。職業適性の判定ではありません。</p></div>
+          <label className="discovery-order">並び順<select className="input" value={order} onChange={e=>setOrder(e.target.value)}><option value="interest">自分の関心に近い順</option><option value="latest">新しく届いた順</option></select></label>
+        </div>
+        <input className="input" type="search" aria-label="テーマを検索" placeholder="テーマ・企業・気になる言葉で検索" value={query} onChange={e=>setQuery(e.target.value)} />
         {loading && <Loading />}
         <ErrorBox error={error} onRetry={reload} />
         {data?.themes.length === 0 && <p className="muted">いま配信中のテーマはありません。</p>}
-        {data?.themes.map((t) => (
-          <Link key={t.id} to={`/themes/${t.id}`} className="theme-card">
-            <div className="spread"><span className="co">{t.companyName}</span>{t.interested && <span className="badge" style={{ background: 'var(--marker)', borderColor: 'var(--ink)' }}>関心あり</span>}</div>
-            <div className="ttl">{t.title}</div>
-            <p className="muted small" style={{ margin: 0 }}>{t.summary}</p>
-          </Link>
-        ))}
-      </main>
-    </>
+        {!!data?.themes.length && !visible.length && <p className="muted">検索に合うテーマがありません。別の言葉で探してみましょう。</p>}
+        <div className="discovery-grid">{visible.map((t) => {const scene=sceneForTheme(t); return (
+          <article key={t.id} className="discovery-card">
+            <figure><img src={scene.src} alt="" width="1536" height="1024" loading="lazy" /><figcaption>AI生成イメージ</figcaption></figure>
+            <div className="discovery-body">
+              <div className="spread lr-wrap"><span className="co">{t.companyName}</span>{t.interested && <span className="badge pen">関心あり</span>}</div>
+              <h3><Link to={`/themes/${t.id}`}>{t.title}</Link></h3>
+              <p className="muted small">{t.summary.slice(0,160)}{t.summary.length>160?'…':''}</p>
+              {!!t.matchTags?.length && <p className="discovery-reason"><b>このテーマが近い理由</b><br />{t.matchTags.slice(0,2).map(x=>`「${x.tag}」の記録が${x.count}件`).join('・')}</p>}
+              <Link to={`/themes/${t.id}`} className="text-link">問いと資料を見る →</Link>
+            </div>
+          </article>
+        );})}</div>
+      </section>
+      <section className="panel spread lr-wrap"><div><h2>気になった問いを、現場で確かめよう。</h2><p className="muted">体験の目的や聞きたいことを、自分の言葉で計画できます。</p></div><Link to="/journey" className="btn primary">探究ストーリーへ →</Link></section>
+    </div>
   );
 }
 
@@ -41,6 +60,7 @@ export function ThemeDetail({ id }) {
     <>
       <StudentHead title={t.title} back="/themes"><p className="muted" style={{ margin: 0 }}>{t.companyName}{t.field ? `｜${t.field}` : ''}</p></StudentHead>
       <main className="student-main">
+        <figure className="theme-scene"><img src={sceneForTheme(t).src} alt={sceneForTheme(t).alt} width="1536" height="1024" /><figcaption>AI生成イメージ・この企業の実際の活動写真ではありません</figcaption></figure>
         <section className="panel"><h2>テーマの概要</h2><p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{t.summary}</p></section>
         <section className="panel">
           <h2>考えてみよう</h2>

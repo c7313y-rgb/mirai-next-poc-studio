@@ -1,6 +1,6 @@
 {
   "name": "mirai-next-poc-studio",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "企業の知見を授業へ、学びをキャリアへつなぐ副担任mirAI NEXT PoC",
   "type": "module",
@@ -21,7 +21,8 @@
     "demo": "node scripts/demo.js",
     "seed:learning": "node --disable-warning=ExperimentalWarning scripts/seed-learning.js",
     "restore-check": "node --disable-warning=ExperimentalWarning scripts/restore-check.js",
-    "production-check": "node --disable-warning=ExperimentalWarning scripts/production-check.js"
+    "production-check": "node --disable-warning=ExperimentalWarning scripts/production-check.js",
+    "seed:journey": "node --disable-warning=ExperimentalWarning scripts/seed-journey.js"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1135.0",

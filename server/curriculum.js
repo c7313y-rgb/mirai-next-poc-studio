@@ -1,4 +1,5 @@
 import { q, parseJson, nowIso } from './db.js';
+import { alignmentForCurriculum, buildAlignment, extractMaterial, materialDesign } from './curriculum-guidance.js';
 
 export function curriculumDto(c) {
   if (!c) return null;
@@ -21,13 +22,16 @@ export function curriculumDto(c) {
     objectives: parseJson(c.objectives, []),
     stages: parseJson(c.stages, []),
     assessment: c.assessment,
+    alignment: alignmentForCurriculum(c),
+    materialAnalysis: extractMaterial(c.source_content),
     status: c.status,
     generatedBy: c.generated_by,
     updatedAt: c.updated_at,
   };
 }
-export function generateCurriculum({ title, sourceContent, audience, subject, duration }) {
-  const excerpt = sourceContent.trim().slice(0, 700);
+export function generateCurriculum({ title, sourceContent, audience, subject, duration, schoolLevel, guidelineId }) {
+  const design = materialDesign(sourceContent, title);
+  const alignment = buildAlignment({ title, sourceContent, audience, subject, schoolLevel, guidelineId });
   const multiple = duration / 50;
   return {
     title,
@@ -35,28 +39,25 @@ export function generateCurriculum({ title, sourceContent, audience, subject, du
     audience,
     subject,
     duration,
-    objectives: [
-      `${title}について、企業が直面する課題と制約を自分の言葉で説明する。`,
-      '複数の立場から解決策を考え、根拠をもって提案する。',
-      '学びと自分の関心を結びつけ、次に試す行動を決める。',
-    ],
+    alignment,
+    objectives: alignment.pillars.map(pillar => pillar.objective),
     stages: [
       {
         title: '出会う・問いを持つ',
         minutes: 5 * multiple,
-        activity: `「${title}」から、どんな社会の課題を想像しますか。授業前の理解度を1〜5で振り返りましょう。`,
+        activity: `${design.drivingQuestion}\n\n授業前の理解度を保存し、今の考えを短く記録しましょう。`,
         teacherNote: '正解を求めず、最初の考えを短い言葉で書かせる。',
       },
       {
         title: '企業の現場を知る',
         minutes: 10 * multiple,
-        activity: `企業からのコンテンツを読み、事実・課題・制約を分けて整理しましょう。\n\n${excerpt}`,
+        activity: `企業提供文の抜粋（事実関係は未検証）を読み、事実・主張・課題・制約を分けて整理しましょう。資料番号を記録し、確認に必要な追加情報を一つ挙げます。\n\n${sourceContent.length <= 700 ? sourceContent : design.evidenceText}`,
         teacherNote: 'これは企業入力をもとにした草案です。公開できる情報と事実関係を確認する。',
       },
       {
         title: '対話して、解決策をつくる',
         minutes: 20 * multiple,
-        activity: `「${title}」について、誰のどんな困りごとを解決するか決め、2つの案を比較しましょう。費用・時間・環境への影響のうち、重視する条件を選んでください。`,
+        activity: `${design.comparison}\n\n${alignment.focus}`,
         teacherNote: '役割を分け、根拠と反対意見も記録させる。',
       },
       {
@@ -74,13 +75,14 @@ export function generateCurriculum({ title, sourceContent, audience, subject, du
         teacherNote: '自己評価の変化を成績や職業適性と断定しない。',
       },
     ],
-    assessment:
-      '課題理解：事実と意見を区別できたか／根拠：理由を示して比較したか／協働：他者の視点を取り入れたか／振り返り：学びと次の行動を具体化したか。各観点を「これから・取り組めた・深められた」で対話的に確認する。',
+    assessment: alignment.pillars.map(pillar => `${pillar.label}：${pillar.evidence}をもとに、目標に向かう過程と変化を言葉で記録する。`).join('\n'),
   };
 }
 export function insertCurriculum(c, companyId, extra = {}) {
+  const alignment = structuredClone(c.alignment || buildAlignment(c));
+  alignment.review = { status: 'pending', confirmedAt: null, confirmedBy: null, note: '' };
   const result = q.run(
-    `INSERT INTO curricula(company_id,source_id,theme_id,teacher_id,school_id,title,source_content,audience,subject,duration,objectives,stages,assessment,status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO curricula(company_id,source_id,theme_id,teacher_id,school_id,title,source_content,audience,subject,duration,objectives,stages,assessment,status,alignment) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     companyId,
     extra.sourceId || null,
     extra.themeId || null,
@@ -95,6 +97,7 @@ export function insertCurriculum(c, companyId, extra = {}) {
     JSON.stringify(c.stages),
     c.assessment,
     extra.status || 'draft',
+    JSON.stringify(alignment),
   );
   return curriculumDto(q.one('SELECT * FROM curricula WHERE id=?', Number(result.lastInsertRowid)));
 }

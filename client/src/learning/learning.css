@@ -51,7 +51,7 @@
   gap: 8px;
   color: #8e98ad;
 }
-.lr-step-strip li span {
+.lr-step-strip .lr-step-number {
   display: grid;
   place-items: center;
   width: 25px;
@@ -62,7 +62,7 @@
 .lr-step-strip li.is-done {
   color: #4f57d8;
 }
-.lr-step-strip li.is-done span {
+.lr-step-strip li.is-done .lr-step-number {
   background: #4f57d8;
   color: white;
 }
@@ -220,12 +220,12 @@
 }
 .lr-form-three {
   display: grid;
-  grid-template-columns: 1fr 1fr 160px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 160px;
   gap: 18px;
 }
 .lr-form-two {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 }
 .lr-source {
@@ -240,7 +240,7 @@
 }
 .lr-stage-editor {
   display: grid;
-  grid-template-columns: 40px 1fr;
+  grid-template-columns: 40px minmax(0, 1fr);
   gap: 16px;
   background: #f8f9fc;
   padding: 22px;
@@ -253,7 +253,7 @@
 }
 .lr-stage-fields {
   display: grid;
-  grid-template-columns: 1fr 120px;
+  grid-template-columns: minmax(0, 1fr) 120px;
   gap: 16px;
 }
 .lr-short-textarea {
@@ -544,7 +544,7 @@
     font-size: 23px;
   }
   .lr-form-three {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .lesson-steps {
     grid-template-columns: repeat(5, minmax(80px, 1fr));
@@ -568,11 +568,11 @@
   }
   .lr-stage-editor {
     padding: 15px;
-    grid-template-columns: 25px 1fr;
+    grid-template-columns: 25px minmax(0, 1fr);
     gap: 8px;
   }
   .lr-stage-fields {
-    grid-template-columns: 1fr 80px;
+    grid-template-columns: minmax(0, 1fr) 80px;
   }
   .lr-editor-actions {
     align-items: stretch;
@@ -636,4 +636,73 @@
 @media (max-width: 650px) {
   .lr-baseline-panel { padding: 16px; }
   .lr-baseline-panel .btn { width: 100%; }
+}
+
+/* Keep nested editors within their parent grid, including native form controls. */
+.lr-hero-copy,
+.lr-card-body,
+.lr-card-meta > *,
+.lr-form-two > *,
+.lr-form-three > *,
+.lr-stage-editor > *,
+.lr-stage-fields > *,
+.lr-editor-actions > *,
+.lesson-row > *,
+.connection-flow > div,
+.next-action-item > p { min-width: 0; }
+.lr-hero-copy { flex: 1 1 auto; }
+.lr-page :where(h1, h2, h3, p, strong, b, summary, .lr-note, .lr-validation) { overflow-wrap: anywhere; }
+.lr-card-meta { flex-wrap: wrap; gap: 6px 12px; }
+.lr-card-company { overflow-wrap: anywhere; }
+.lr-tabs { flex-wrap: wrap; }
+.lr-tabs button { min-width: 0; min-height: 44px; white-space: normal; }
+.lr-editor-actions { flex-wrap: wrap; }
+.lr-editor-actions .row { min-width: 0; }
+.lr-editor-actions .btn { max-width: 100%; white-space: normal; }
+.lr-time-total { flex-shrink: 0; }
+.lr-source-details, .json-details { min-width: 0; max-width: 100%; }
+.lr-source-details summary, .json-details summary { cursor: pointer; padding: 4px 0; }
+.lr-source-details p { overflow-wrap: anywhere; }
+.lr-step-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+  overflow: visible;
+  gap: 12px;
+  padding: 12px 0;
+  margin-inline: 0;
+}
+.lr-step-strip li { min-width: 0; white-space: normal; align-items: flex-start; line-height: 1.65; }
+.lr-step-strip .lr-step-number { flex: 0 0 25px; }
+.lr-step-strip .lr-step-label { min-width: 0; overflow-wrap: anywhere; padding-top: 2px; }
+.lesson-row .grow { min-width: 0; }
+.lesson-row > .lr-status { flex-shrink: 0; }
+.lesson-row > span:last-child { flex-shrink: 0; }
+.lesson-steps {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 105px), 1fr));
+  overflow: visible;
+}
+.lesson-steps > div { min-width: 0; overflow-wrap: anywhere; }
+.connection-flow > span { flex: 0 0 auto; }
+.interest-options button { max-width: 100%; min-height: 44px; white-space: normal; }
+.lr-hero.scene-hero { display: grid; }
+@media (max-width: 900px) {
+  .lr-form-three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lr-stage-editor { padding: 18px; gap: 12px; }
+  .lr-card-body { padding: 18px; }
+}
+@media (max-width: 650px) {
+  .lr-form-two, .lr-form-three { grid-template-columns: minmax(0, 1fr); }
+  .lr-stage-editor { grid-template-columns: minmax(0, 1fr); padding: 16px; gap: 8px; }
+  .lr-stage-number { font-size: 16px; }
+  .lr-stage-fields { grid-template-columns: minmax(0, 1fr) 84px; gap: 10px; }
+  .lr-editor-actions .row { width: 100%; }
+  .lr-editor-actions .btn { flex: 1 1 140px; }
+  .lesson-row { flex-wrap: wrap; }
+  .lesson-row .grow { flex: 1 1 170px; }
+  .lesson-row > .lr-status { margin-left: auto; }
+  .connection-flow { flex-direction: column; align-items: stretch; gap: 8px; }
+  .connection-flow > div { padding: 16px; }
+  .connection-flow > span { align-self: center; transform: rotate(90deg); }
+  .connection-flow b { font-size: 14px; }
+  .connection-flow small { font-size: 12px; }
 }

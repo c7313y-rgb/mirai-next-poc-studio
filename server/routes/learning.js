@@ -12,6 +12,7 @@ import { jstDate, addDays } from '../lib/time.js';
 import { logEvent, audit } from '../lib/log.js';
 import { queueRecordAnalysis } from '../jobs.js';
 import { getSettings } from '../settings.js';
+import { GUIDANCE_PROFILES, GUIDANCE_NOTE, selectGuidance, buildAlignment, normalizeAlignment, alignmentForCurriculum } from '../curriculum-guidance.js';
 const r = Router();
 r.use(requireRole('company', 'teacher', 'student', 'admin'));
 const fail = (res, text, status = 400) => res.status(status).json({ error: text });
@@ -85,6 +86,9 @@ const baselineFor = (lessonId, userId) => {
 };
 const measurementNote =
   '理解度は生徒による1〜5段階の自己評価です。能力・成績や介入の因果効果を表すものではありません。';
+r.get('/curriculum-guidance', requireRole('company', 'teacher'), (_req, res) => {
+  res.json({ profiles: GUIDANCE_PROFILES, note: GUIDANCE_NOTE });
+});
 r.get('/curricula', requireRole('company', 'teacher'), (req, res) => {
   const rows =
     req.user.role === 'company'
@@ -105,12 +109,19 @@ r.post('/curricula/generate', requireRole('company'), (req, res) => {
     !str(b.sourceContent, 30, 20000) ||
     !str(b.audience, 1, 100) ||
     !str(b.subject, 1, 100) ||
-    ![50, 100].includes(b.duration)
+    ![50, 100].includes(b.duration) || !selectGuidance(b)
   )
     return fail(res, 'タイトル・30文字以上の内容・対象・教科・授業時間を確認してください');
   const c = insertCurriculum(generateCurriculum(b), req.user.company_id);
   logEvent(req.user, 'curriculum_generate', 'curriculum', c.id, { provider: 'template' });
   res.status(201).json({ curriculum: c });
+});
+r.post('/curricula/:id/guidance-preview', requireRole('company', 'teacher'), (req, res) => {
+  const c = getC(req.params.id);
+  if (!owned(req.user, c)) return fail(res, '教材を編集する権限がありません', 403);
+  const b = req.body || {};
+  if (!selectGuidance(b) || !str(b.title, 1, 200) || !str(b.audience, 1, 100) || !str(b.subject, 1, 100)) return fail(res, '対象校種・教科・教材名を確認してください');
+  res.json({ alignment: buildAlignment(b) });
 });
 r.put('/curricula/:id', requireRole('company', 'teacher'), (req, res) => {
   const c = getC(req.params.id);
@@ -142,14 +153,19 @@ r.put('/curricula/:id', requireRole('company', 'teacher'), (req, res) => {
     b.stages.reduce((n, s) => n + s.minutes, 0) !== c.duration
   )
     return fail(res, '入力内容と活動時間の合計を確認してください');
+  let alignment;
+  try {
+    alignment = normalizeAlignment(b.alignment ?? alignmentForCurriculum(c), b, b.stages.length);
+  } catch (error) { return fail(res, error.message); }
   q.run(
-    "UPDATE curricula SET title=?,audience=?,subject=?,objectives=?,stages=?,assessment=?,status='draft',updated_at=? WHERE id=?",
+    "UPDATE curricula SET title=?,audience=?,subject=?,objectives=?,stages=?,assessment=?,alignment=?,status='draft',updated_at=? WHERE id=?",
     b.title,
     b.audience,
     b.subject,
     JSON.stringify(b.objectives),
     JSON.stringify(b.stages),
     b.assessment,
+    JSON.stringify(alignment),
     nowIso(),
     c.id,
   );
@@ -186,7 +202,11 @@ r.post('/curricula/:id/adopt', requireRole('teacher'), (req, res) => {
 r.post('/curricula/:id/approve', requireRole('teacher'), (req, res) => {
   const c = getC(req.params.id);
   if (!owned(req.user, c)) return fail(res, '自分が採用した教材ではありません', 403);
-  q.run("UPDATE curricula SET status='approved',updated_at=? WHERE id=?", nowIso(), c.id);
+  const alignment = alignmentForCurriculum(c);
+  if (req.body?.alignmentConfirmed !== true || !alignment.schoolGoal?.trim() || !alignment.unitPosition?.trim())
+    return fail(res, '自校の目標・年間計画での位置を入力して保存し、指導要領との対応・評価方法を確認してください', 409);
+  alignment.review = { status: 'confirmed', confirmedBy: req.user.id, confirmedAt: nowIso(), note: String(req.body?.reviewNote || '').slice(0, 1000) };
+  q.run("UPDATE curricula SET status='approved',alignment=?,updated_at=? WHERE id=?", JSON.stringify(alignment), nowIso(), c.id);
   audit(req, 'curriculum_approve', { curriculumId: c.id });
   res.json({ curriculum: curriculumDto(getC(c.id)) });
 });
@@ -205,7 +225,7 @@ r.get('/lessons', requireRole('teacher', 'student'), (req, res) => {
 r.post('/lessons', requireRole('teacher'), (req, res) => {
   const b = req.body || {},
     c = getC(b.curriculumId);
-  if (!owned(req.user, c) || c.status !== 'approved')
+  if (!owned(req.user, c) || c.status !== 'approved' || alignmentForCurriculum(c).review.status !== 'confirmed')
     return fail(res, '自分が最終承認した教材を選択してください', 403);
   if (!teacherCanSeeClass(req.user, b.classId)) return fail(res, '担当クラスではありません', 403);
   if (b.scheduledAt && !Number.isFinite(Date.parse(b.scheduledAt)))

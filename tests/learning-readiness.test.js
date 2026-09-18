@@ -25,7 +25,8 @@ before(async () => {
   const original = (await company.post('/api/learning/curricula/generate', source)).data.curriculum;
   await company.post(`/api/learning/curricula/${original.id}/publish`, {});
   curriculum = (await teacher.post(`/api/learning/curricula/${original.id}/adopt`, {})).data.curriculum;
-  await teacher.post(`/api/learning/curricula/${curriculum.id}/approve`, {});
+  curriculum = (await teacher.put(`/api/learning/curricula/${curriculum.id}`, { ...curriculum, alignment: { ...curriculum.alignment, schoolGoal: '社会の課題を根拠で考える', unitPosition: '探究単元の導入' } })).data.curriculum;
+  await teacher.post(`/api/learning/curricula/${curriculum.id}/approve`, { alignmentConfirmed: true });
   ({ drainJobs } = await import('../server/jobs.js'));
   ({ mockProvider } = await import('../server/ai/mock.js'));
   originalAnalyze = mockProvider.analyze;

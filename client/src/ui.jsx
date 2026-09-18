@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { Children, cloneElement, createContext, isValidElement, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
 import { api } from './api.js';
 
 const ToastCtx = createContext(() => {});
@@ -47,7 +47,28 @@ export function ErrorBox({ error, onRetry }) {
 }
 
 export function Field({ label, hint, children }) {
-  return <label className="field"><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
+  const generatedId = useId();
+  const labelId = `${generatedId}-label`;
+  const hintId = `${generatedId}-hint`;
+  const items = Children.toArray(children);
+  const child = items.length === 1 ? items[0] : null;
+  const singleControl = isValidElement(child)
+    && ['input', 'select', 'textarea'].includes(child.type)
+    && !(child.type === 'input' && child.props.type === 'hidden');
+
+  if (singleControl) {
+    const controlId = child.props.id || `${generatedId}-control`;
+    const props = { id: controlId };
+    if (hint) {
+      props['aria-describedby'] = [...new Set(
+        `${child.props['aria-describedby'] || ''} ${hintId}`.trim().split(/\s+/),
+      )].join(' ');
+    }
+    return <div className="field"><span><label htmlFor={controlId}>{label}</label></span>{cloneElement(child, props)}{hint && <small id={hintId}>{hint}</small>}</div>;
+  }
+
+  // Composite fields keep their controls and labels intact; do not guess a target.
+  return <div className="field" role="group" aria-labelledby={labelId} aria-describedby={hint ? hintId : undefined}><span id={labelId}>{label}</span>{children}{hint && <small id={hintId}>{hint}</small>}</div>;
 }
 
 export function Rating({ value, onChange, low = 'あてはまらない', high = 'とてもあてはまる', label }) {

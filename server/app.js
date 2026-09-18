@@ -10,6 +10,7 @@ import companyRoutes from './routes/company.js';
 import adminRoutes from './routes/admin.js';
 import fileRoutes from './routes/files.js';
 import learningRoutes from './routes/learning.js';
+import journeyRoutes from './routes/journey.js';
 import { ai } from './ai/index.js';
 import { config } from './config.js';
 
@@ -44,6 +45,7 @@ export function createApp() {
   app.use('/api/admin', adminRoutes);
   app.use('/api/files', fileRoutes);
   app.use('/api/learning', learningRoutes);
+  app.use('/api/journey', journeyRoutes);
   app.use('/api', (req, res) => res.status(404).json({ error: 'APIが見つかりません' }));
 
   const dist = path.resolve(__dirname, '../client/dist');

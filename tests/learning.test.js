@@ -80,11 +80,11 @@ test('教員編集：独立コピー・最終承認・授業スナップショ�
   assert.equal((await teacher.post('/api/learning/lessons', { curriculumId: adopted.id, classId })).status, 403);
   const invalid = { ...adopted, stages: adopted.stages.map((s, i) => ({ ...s, minutes: s.minutes + (i === 0 ? 1 : 0) })) };
   assert.equal((await teacher.put(`/api/learning/curricula/${adopted.id}`, invalid)).status, 400);
-  const edited = await teacher.put(`/api/learning/curricula/${adopted.id}`, { ...adopted, title: '2年A組で考える工場の未来' });
+  const edited = await teacher.put(`/api/learning/curricula/${adopted.id}`, { ...adopted, title: '2年A組で考える工場の未来', alignment: { ...adopted.alignment, schoolGoal: '地域の課題を根拠に基づいて考える', unitPosition: '2学期の地域探究の導入' } });
   assert.equal(edited.status, 200);
   adopted = edited.data.curriculum;
   assert.equal(env.q.one('SELECT title FROM curricula WHERE id=?', original.id).title, source.title);
-  adopted = (await teacher.post(`/api/learning/curricula/${adopted.id}/approve`, {})).data.curriculum;
+  adopted = (await teacher.post(`/api/learning/curricula/${adopted.id}/approve`, { alignmentConfirmed: true })).data.curriculum;
   assert.equal(adopted.status, 'approved');
   assert.equal((await teacher.post('/api/learning/lessons', { curriculumId: adopted.id, classId: otherClassId })).status, 403);
   assert.equal((await teacher.post('/api/learning/lessons', { curriculumId: adopted.id, classId, scheduledAt: 'not-a-date' })).status, 400);
@@ -197,7 +197,7 @@ test('企業集計：5人未満は抑制、複数授業への同一生徒回答�
   assert.ok(!JSON.stringify(report).includes('修正した自分の学び'));
   assert.ok(!JSON.stringify(report).includes('MN-'));
   assert.equal((await otherCompany.get('/api/learning/company-report')).data.curricula.length, 0);
-  await teacher.post(`/api/learning/curricula/${adopted.id}/approve`, {});
+  await teacher.post(`/api/learning/curricula/${adopted.id}/approve`, { alignmentConfirmed: true });
   for (let i = 0; i < 4; i++) {
     const l = (await teacher.post('/api/learning/lessons', { curriculumId: adopted.id, classId })).data.lesson;
     await student.put(`/api/learning/lessons/${l.id}/baseline`, { before: 2 });

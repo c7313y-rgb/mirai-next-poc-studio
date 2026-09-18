@@ -82,15 +82,18 @@ export default function Login({ onLogin }) {
       <div className="portal-main">
         <section className="portal-scene">
           <img
-            src="/images/learning-scene.png"
-            alt="教員と企業の技術者と一緒に、ロボットの仕組みを探究する生徒たちのイメージ"
+            src="/images/fieldwork-v2.webp"
+            alt="地域の農家と対話する生徒と教員の架空の越境学習シーン"
+            width="1536"
+            height="1024"
+            fetchPriority="high"
           />
           <div className="scene-caption">
-            <span>FIELD TO CLASSROOM</span>
+            <span>DISCOVER YOUR OWN PATH</span>
             <h2>
-              知る。考える。
+              出会う。手帳に残す。
               <br />
-              まだ知らない自分に出会う。
+              自分の言葉で、未来を選ぶ。
             </h2>
             <div className="scene-flow">
               <b>企業の知見</b>
@@ -117,7 +120,7 @@ export default function Login({ onLogin }) {
                 aria-pressed={role === r.id}
                 onClick={() => setRole(r.id)}
               >
-                <span className={`role-mark ${r.id}`}>{r.mark}</span>
+                <span className={`role-mark role-mark-${r.id}`}>{r.mark}</span>
                 <span>
                   <small>{r.en}</small>
                   <strong>{r.name}</strong>

@@ -12,7 +12,14 @@ export default function Career() {
         title="「気になる」が、未来の道しるべ。"
         description="日々の記録を振り返ると、自分らしい関心が見えてくる。次の一歩を見つけましょう。"
         variant="career"
+        imageSrc="/images/reflection-v2.webp"
+        imageAlt="体験を手帳に書き、自分の次の一歩を考える生徒のイラスト"
+        imageNote="AI生成イラスト"
       />
+      <section className="panel spread lr-wrap">
+        <div><span className="eyebrow">MY OWN WORDS</span><h2>体験を、自分の選択の根拠に。</h2><p className="muted">気づき・越境体験・手帳の内省をつなぎ、先生と対話しながら次の一歩を決めましょう。</p></div>
+        <a className="btn primary" href="#/journey">探究ストーリーを開く →</a>
+      </section>
       <div className="two-col">
         <section className="panel">
           <span className="eyebrow">MY INTERESTS</span>

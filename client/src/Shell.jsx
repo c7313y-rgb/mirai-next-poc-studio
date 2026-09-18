@@ -1,5 +1,6 @@
 import { Link } from './router.jsx';
 import { useApi } from './ui.jsx';
+import { useState } from 'react';
 const labels = {
   company: '企業パートナー',
   teacher: '教員ワークスペース',
@@ -8,12 +9,16 @@ const labels = {
 };
 export default function Shell({ user, route, onLogout, nav, children }) {
   const info = useApi('/auth/config');
+  const [menuOpen, setMenuOpen] = useState(false);
   const current = nav.find((n) =>
     n.to === '/' ? route.path === '/' : route.path.startsWith(n.to),
   );
   return (
     <div className={`workspace role-${user.role}`}>
-      <a className="skip-link" href="#main-content">
+      <a className="skip-link" href="#main-content" onClick={(event) => {
+        event.preventDefault();
+        document.getElementById('main-content')?.focus();
+      }}>
         本文へ移動
       </a>
       <aside className="workspace-side">
@@ -28,13 +33,16 @@ export default function Shell({ user, route, onLogout, nav, children }) {
           <span className="avatar">
             {{ company: '企', teacher: '教', student: '学', admin: '運' }[user.role]}
           </span>
-          <div>
+          <div className="workspace-person-copy">
             <b>{labels[user.role]}</b>
             <small>{user.company?.name || user.school?.name || '実証プロジェクト'}</small>
           </div>
         </div>
         <span className="nav-caption">WORKSPACE</span>
-        <nav aria-label="メインメニュー">
+        <button className="mobile-menu-toggle" aria-expanded={menuOpen} aria-controls="workspace-navigation" onClick={() => setMenuOpen(!menuOpen)}>
+          <span>☰ {current?.label || 'メニュー'}</span><span>{menuOpen ? '閉じる −' : 'メニューを開く ＋'}</span>
+        </button>
+        <nav id="workspace-navigation" className={menuOpen ? 'mobile-menu-open' : ''} aria-label="メインメニュー" onClick={() => setMenuOpen(false)}>
           {nav.map((n) => (
             <Link
               key={n.to}
@@ -42,8 +50,8 @@ export default function Shell({ user, route, onLogout, nav, children }) {
               className={current === n ? 'active' : ''}
               aria-current={current === n ? 'page' : undefined}
             >
-              <span aria-hidden="true">{n.icon || '◇'}</span>
-              {n.label}
+              <span className="workspace-nav-icon" aria-hidden="true">{n.icon || '◇'}</span>
+              <span className="workspace-nav-label">{n.label}</span>
             </Link>
           ))}
         </nav>
@@ -67,7 +75,7 @@ export default function Shell({ user, route, onLogout, nav, children }) {
       </aside>
       <div className="workspace-body">
         <header className="workspace-top">
-          <span>
+          <span className="workspace-crumb">
             {labels[user.role]} <span className="crumb">/ {current?.label || '詳細'}</span>
           </span>
           <div className="row">
@@ -89,7 +97,7 @@ export default function Shell({ user, route, onLogout, nav, children }) {
             <span>AIの読み取り・コメントはデモ応答です。実証の評価値ではありません。</span>
           </div>
         )}
-        <main className="workspace-content" id="main-content">
+        <main className="workspace-content" id="main-content" tabIndex={-1}>
           {children}
         </main>
         <footer className="workspace-footer">

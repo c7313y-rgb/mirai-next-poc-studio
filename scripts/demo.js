@@ -17,4 +17,5 @@ const run = (script) => {
 run('scripts/build.js');
 if (!fs.existsSync(`${env.DATA_DIR}/mirai-next.db`)) run('scripts/seed-demo.js');
 run('scripts/seed-learning.js');
+run('scripts/seed-journey.js');
 run('server/index.js');

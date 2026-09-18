@@ -143,6 +143,7 @@ CREATE TABLE IF NOT EXISTS curricula (
   objectives TEXT NOT NULL, stages TEXT NOT NULL, assessment TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','approved')),
   generated_by TEXT NOT NULL DEFAULT 'template',
+  alignment TEXT NOT NULL DEFAULT '{}',
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   CHECK ((source_id IS NULL AND teacher_id IS NULL AND school_id IS NULL AND status != 'approved')
@@ -217,6 +218,8 @@ export function openDb(file = path.join(config.dataDir, 'mirai-next.db')) {
   db = new DatabaseSync(file);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
   db.exec(SCHEMA);
+  const curriculumColumns = new Set(db.prepare('PRAGMA table_info(curricula)').all().map(column => column.name));
+  if (!curriculumColumns.has('alignment')) db.exec("ALTER TABLE curricula ADD COLUMN alignment TEXT NOT NULL DEFAULT '{}'");
   return db;
 }
 

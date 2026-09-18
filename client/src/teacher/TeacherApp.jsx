@@ -8,6 +8,7 @@ import ClassDashboard from './ClassDashboard.jsx';
 import StudentDetail from './StudentDetail.jsx';
 import Themes from './Themes.jsx';
 import LessonSurveys from './LessonSurveys.jsx';
+import Journey from '../learning/Journey.jsx';
 const nav = [
   { to: '/', label: 'ダッシュボード', icon: '▦' },
   { to: '/curriculum', label: '教材ライブラリ・編集', icon: '▤' },
@@ -15,6 +16,7 @@ const nav = [
   { to: '/classes', label: 'クラス・生徒の記録', icon: '◎' },
   { to: '/themes', label: '探究テーマの配信', icon: '✦' },
   { to: '/lesson-surveys', label: '授業後アンケート', icon: '☑' },
+  { to: '/journey', label: '探究・面談の伴走', icon: '◇' },
 ];
 export default function TeacherApp(props) {
   const p = props.route.path;
@@ -26,6 +28,7 @@ export default function TeacherApp(props) {
   else if (p === '/lessons') page = <LessonWorkspace role="teacher" />;
   else if (p === '/themes') page = <Themes />;
   else if (p === '/lesson-surveys') page = <LessonSurveys />;
+  else if (p === '/journey') page = <Journey role="teacher" />;
   else page = <Overview user={props.user} />;
   return (
     <Shell {...props} nav={nav}>

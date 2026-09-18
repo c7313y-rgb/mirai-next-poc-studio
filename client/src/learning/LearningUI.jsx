@@ -50,16 +50,21 @@ export function LearningArt({ variant = 'curriculum' }) {
   );
 }
 
-export function LearningHeader({ eyebrow, title, description, variant, children }) {
+export function LearningHeader({ eyebrow, title, description, variant, children, imageSrc, imageAlt = '', imageNote, imagePosition }) {
   return (
-    <section className="lr-hero">
-      <div className="lr-hero-copy">
+    <section className={`lr-hero${imageSrc ? ' scene-hero' : ''}`}>
+      <div className={`lr-hero-copy${imageSrc ? ' scene-hero-copy' : ''}`}>
         <span className="lr-eyebrow">{eyebrow}</span>
         <h1>{title}</h1>
         <p>{description}</p>
         {children}
       </div>
-      <LearningArt variant={variant} />
+      {imageSrc ? (
+        <figure className="scene-hero-media">
+          <img src={imageSrc} alt={imageAlt} style={imagePosition ? { objectPosition: imagePosition } : undefined} />
+          {imageNote && <figcaption>{imageNote}</figcaption>}
+        </figure>
+      ) : <LearningArt variant={variant} />}
     </section>
   );
 }
@@ -80,9 +85,9 @@ export function StepStrip({ items, active = 0 }) {
   return (
     <ol className="lr-step-strip">
       {items.map((item, i) => (
-        <li key={item} className={i <= active ? 'is-done' : ''}>
-          <span>{i + 1}</span>
-          {item}
+        <li key={item} className={i <= active ? 'is-done' : ''} aria-current={i === active ? 'step' : undefined}>
+          <span className="lr-step-number">{i + 1}</span>
+          <span className="lr-step-label">{item}</span>
         </li>
       ))}
     </ol>

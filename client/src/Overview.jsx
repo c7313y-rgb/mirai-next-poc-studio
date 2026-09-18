@@ -1,6 +1,7 @@
 import { useApi, ErrorBox, Loading } from './ui.jsx';
 import { Link } from './router.jsx';
 import { pct, num } from './api.js';
+import { SCENES } from './learning/scenes.js';
 const M = {
   company: {
     eyebrow: 'PARTNER HOME',
@@ -38,6 +39,7 @@ export default function Overview({ user }) {
   if (info.loading) return <Loading />;
   if (info.error) return <ErrorBox error={info.error} onRetry={info.reload} />;
   const d = info.data;
+  const scene = role === 'company' ? SCENES.company : role === 'teacher' ? SCENES.fieldwork : SCENES.reflection;
   const stats =
     role === 'company'
       ? [
@@ -101,7 +103,7 @@ export default function Overview({ user }) {
           </Link>
         </div>
         <figure>
-          <img src="/images/learning-scene.png" alt="企業の技術者と生徒が学ぶ架空の授業シーン" />
+          <img src={scene.src} alt={scene.alt} width="1536" height="1024" fetchPriority="high" />
           <figcaption>社会とつながる学び / AI生成イメージ</figcaption>
         </figure>
       </section>
@@ -134,7 +136,7 @@ export default function Overview({ user }) {
           {role === 'company' ? (
             <>
               <p className="small muted">
-                理解度の前後比較は自己評価です。5人未満は集計を表示しません。
+                理解度の前後比較は自己評価です。少人数の集計は個人の特定を防ぐため表示しません。
               </p>
               {lessons.data?.curricula.slice(0, 4).map((c) => (
                 <article className="impact-row" key={c.curriculumId}>
@@ -189,11 +191,13 @@ export default function Overview({ user }) {
                   ['01', '授業を準備する', '教材の採用・編集・最終承認', '/curriculum'],
                   ['02', '生徒の記録を見る', '提出状況・コメント・要確認', '/classes'],
                   ['03', '授業を振り返る', '授業後アンケートに回答', '/lesson-surveys'],
+                  ['04', '探究・面談に伴走する', '体験の記録と声かけ、実証の評価', '/journey'],
                 ]
               : [
                   ['01', '今日の手帳を記録', '撮影・確認・提出', '/capture'],
                   ['02', '気になるテーマを探す', '社会のリアルな問いに出会う', '/themes'],
                   ['03', 'わたしの未来を見る', '関心・次の行動・mirAI共有', '/career'],
+                  ['04', '体験を、自分の言葉に', '越境計画・手帳内省・先生との対話', '/journey'],
                 ]
           ).map(([n, title, desc, path]) => (
             <Link className="quick-link" key={n} to={path}>
@@ -210,16 +214,16 @@ export default function Overview({ user }) {
       <section className="journey-banner">
         <div>
           <span className="eyebrow">THE LEARNING CYCLE</span>
-          <h3>社会と出会い、自分の可能性をひらく。</h3>
+          <h3>気づきを、体験へ。体験を、自分の選択へ。</h3>
         </div>
         <div>
-          <span>企業の知見</span>
+          <span>01 気づく</span>
           <b>→</b>
-          <span>探究する授業</span>
+          <span>02 関心を探す</span>
           <b>→</b>
-          <span>自分の振り返り</span>
+          <span>03 越境する</span>
           <b>→</b>
-          <span>未来への一歩</span>
+          <span>04 深めて選ぶ</span>
         </div>
       </section>
     </div>

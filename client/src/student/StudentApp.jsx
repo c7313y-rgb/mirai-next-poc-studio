@@ -4,6 +4,7 @@ import Shell from '../Shell.jsx';
 import Overview from '../Overview.jsx';
 import LessonWorkspace from '../learning/Lessons.jsx';
 import Career from '../learning/Career.jsx';
+import Journey from '../learning/Journey.jsx';
 import Capture, { ConfirmRecord } from './Capture.jsx';
 import { ThemeList, ThemeDetail } from './Themes.jsx';
 import Records from './Records.jsx';
@@ -76,6 +77,7 @@ export default function StudentApp({ user, route, onLogout }) {
   else if ((m = match('/surveys/:id', path))) page = <SurveyAnswer id={m.id} />;
   else if (path === '/lessons') page = <LessonWorkspace role="student" user={user} />;
   else if (path === '/career') page = <Career />;
+  else if (path === '/journey') page = <Journey role="student" />;
   else if (path === '/journal') page = <Home user={user} />;
   else page = <Overview user={user} />;
 
@@ -86,6 +88,7 @@ export default function StudentApp({ user, route, onLogout }) {
     { to: '/capture', label: '手帳を記録する', icon: '▣' },
     { to: '/records', label: 'わたしの記録', icon: '▤' },
     { to: '/career', label: 'わたしの未来', icon: '✧' },
+    { to: '/journey', label: '探究ストーリー', icon: '◇' },
     { to: '/surveys', label: 'アンケート', icon: '☑' },
   ];
   return (

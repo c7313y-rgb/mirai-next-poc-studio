@@ -9,6 +9,8 @@ const EMPTY_SOURCE = {
   audience: '高校1〜2年生',
   subject: '総合的な探究の時間',
   duration: 50,
+  schoolLevel: 'high',
+  guidelineId: 'high_inquiry',
 };
 const EXAMPLE_SOURCE = {
   ...EMPTY_SOURCE,
@@ -20,11 +22,13 @@ const toEditor = (c) => ({
   ...c,
   objectivesText: (c.objectives || []).join('\n'),
   stages: (c.stages || []).map((s) => ({ ...s })),
+  alignment: structuredClone(c.alignment),
 });
 
 export default function CurriculumStudio({ role = 'company' }) {
   const teacher = role === 'teacher';
   const list = useApi('/learning/curricula');
+  const guidance = useApi('/learning/curriculum-guidance');
   const classes = useApi(teacher ? '/teacher/classes' : null);
   const toast = useToast();
   const editorRef = useRef(null);
@@ -38,6 +42,8 @@ export default function CurriculumStudio({ role = 'company' }) {
   const [error, setError] = useState(null);
   const [classId, setClassId] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
+  const [alignmentConfirmed, setAlignmentConfirmed] = useState(false);
+  const profiles = guidance.data?.profiles || [];
   const curricula = list.data?.curricula || [];
   const mine = curricula.filter((c) => !!c.teacherId);
   const library = curricula.filter((c) => !c.teacherId && c.status === 'published');
@@ -49,6 +55,7 @@ export default function CurriculumStudio({ role = 'company' }) {
   const patch = (values) => {
     setEditor((old) => ({ ...old, ...values }));
     setDirty(true);
+    setAlignmentConfirmed(false);
   };
   const openEditor = (curriculum) => {
     if (dirty && !window.confirm('未保存の変更があります。別の教材を開くと変更は失われます。開きますか？')) return;
@@ -57,7 +64,8 @@ export default function CurriculumStudio({ role = 'company' }) {
     setDirty(false);
     setError(null);
     setClassId('');
-    setTimeout(() => editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    setAlignmentConfirmed(false);
+    setTimeout(() => editorRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }), 60);
   };
   const run = async (key, fn) => {
     setBusy(key);
@@ -90,6 +98,7 @@ export default function CurriculumStudio({ role = 'company' }) {
         .filter(Boolean),
       stages: editor.stages.map((s) => ({ ...s, minutes: Number(s.minutes) })),
       assessment: editor.assessment,
+      alignment: editor.alignment,
     });
     setEditor(toEditor(data.curriculum));
     setDirty(false);
@@ -99,7 +108,7 @@ export default function CurriculumStudio({ role = 'company' }) {
   const transition = (action) =>
     run(action, async () => {
       if (dirty) await save();
-      const data = await api.post(`/learning/curricula/${editor.id}/${action}`, {});
+      const data = await api.post(`/learning/curricula/${editor.id}/${action}`, action === 'approve' ? { alignmentConfirmed } : {});
       setEditor(toEditor(data.curriculum));
       setDirty(false);
       await list.reload();
@@ -113,6 +122,13 @@ export default function CurriculumStudio({ role = 'company' }) {
             : '授業に使用できる教材として最終承認しました',
         );
     });
+  const changeGuidance = (guidelineId) => run('guidance', async () => {
+    const profile = profiles.find(p => p.id === guidelineId);
+    if (!profile) return;
+    if (!window.confirm('選んだ校種・教科の対応候補を作り直します。編集した対応目標・評価証拠と自校の目標は再入力になります。続けますか？')) return;
+    const data = await api.post(`/learning/curricula/${editor.id}/guidance-preview`, { title: editor.title, audience: editor.audience, subject: profile.subject, schoolLevel: profile.schoolLevel, guidelineId });
+    patch({ alignment: data.alignment, subject: profile.subject });
+  });
   const createLesson = (event) => {
     event.preventDefault();
     run('lesson', async () => {
@@ -133,6 +149,9 @@ export default function CurriculumStudio({ role = 'company' }) {
   return (
     <div className="stack lr-page">
       <LearningHeader
+        imageSrc={!teacher ? '/images/enterprise-v2.webp' : undefined}
+        imageAlt="企業の技術者と教員が素材を囲んで授業を考える架空のシーン"
+        imageNote="AI生成イメージ"
         eyebrow={teacher ? 'TEACHER / CURRICULUM' : 'PARTNER / CURRICULUM STUDIO'}
         title={teacher ? '社会とつながる、授業づくり。' : '企業の知見を、学びのきっかけに。'}
         description={
@@ -189,7 +208,7 @@ export default function CurriculumStudio({ role = 'company' }) {
             </button>
           </div>
           <p className="lr-note">
-            このPoCでは、入力内容を使ったテンプレート変換で授業案を作成します。AIによる外部送信は行いません。作成後に必ず内容を確認してください。
+            入力した企業の文章から、根拠となる記述と学習指導要領の対応候補を組み合わせて授業案を作成します。内容は外部AIへ送信しません。教員が自校の目標と評価方法を確認して仕上げます。
           </p>
           <form className="stack" onSubmit={generate}>
             <Field label="教材のタイトル">
@@ -220,6 +239,14 @@ export default function CurriculumStudio({ role = 'company' }) {
               自社で権利を保有するか、授業利用の許諾を得た内容を入力してください。個人情報や社外秘は含めず、引用部分と出典を明確にしてください。公開前に担当者による確認が必要です。
             </p>
             <div className="lr-form-three">
+              <Field label="参照する校種・教科">
+                <select className="input" value={source.guidelineId} disabled={!profiles.length} onChange={(e) => {
+                  const profile = profiles.find(p => p.id === e.target.value);
+                  setSource({ ...source, guidelineId: profile.id, schoolLevel: profile.schoolLevel, subject: profile.subject, audience: profile.schoolLevel === 'middle' ? '中学1〜3年生' : '高校1〜2年生' });
+                }}>
+                  {profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.label}</option>)}
+                </select>
+              </Field>
               <Field label="対象学年">
                 <input
                   className="input"
@@ -316,9 +343,7 @@ export default function CurriculumStudio({ role = 'company' }) {
               key={c.id}
             >
               <div className={`lr-card-cover lr-card-cover-${i % 3}`}>
-                <span className="lr-cover-symbol" aria-hidden="true">
-                  {['◎', '✳', '◇'][i % 3]}
-                </span>
+                <img className="lr-card-scene" src="/images/enterprise-v2.webp" alt="" loading="lazy" />
                 <span>{c.subject}</span>
                 <b>
                   {c.duration} <small>MIN</small>
@@ -431,6 +456,75 @@ export default function CurriculumStudio({ role = 'company' }) {
                 onChange={(e) => patch({ objectivesText: e.target.value })}
               />
             </Field>
+            {editor.alignment && (
+              <section className="panel stack" aria-label="学習指導要領との対応候補">
+                <div className="spread lr-wrap">
+                  <h3>学習指導要領と、授業をつなぐ</h3>
+                  <span className={`badge ${editor.alignment.review?.status === 'confirmed' && !dirty ? 'ok' : 'warn'}`}>{editor.alignment.review?.status === 'confirmed' && !dirty ? '教員が確認済み' : '教員の確認が必要'}</span>
+                </div>
+                <p className="lr-note">{editor.alignment.note}</p>
+                <Field label="校種・教科の対応候補" hint="選び直すと、資質・能力と探究過程の候補を作り直します。">
+                  <select className="input" value={editor.alignment.guidelineId} disabled={!editable || !!busy} onChange={(e) => changeGuidance(e.target.value)}>
+                    {profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.label}</option>)}
+                  </select>
+                </Field>
+                <p className="muted small">設計の焦点：{editor.alignment.focus}</p>
+                <div className="lr-form-two">
+                  <Field label="自校で育てたい力・目標" hint="教員の最終承認に必要です。学校の目標と今回の授業の関係を記します。">
+                    <textarea className="input" maxLength={2000} disabled={!editable} value={editor.alignment.schoolGoal} placeholder="例：地域の課題を根拠に基づいて考え、他者と協力して提案する力を育てる。" onChange={e => patch({ alignment: { ...editor.alignment, schoolGoal: e.target.value } })} />
+                  </Field>
+                  <Field label="年間計画・単元での位置" hint="1コマの活動を前後の学びにどうつなげるかを記します。">
+                    <textarea className="input" maxLength={1000} disabled={!editable} value={editor.alignment.unitPosition} placeholder="例：2学期の地域探究の導入。次時に聞き取り調査を行う。" onChange={e => patch({ alignment: { ...editor.alignment, unitPosition: e.target.value } })} />
+                  </Field>
+                </div>
+                <Field label="他教科・領域とのつながり">
+                  <input className="input" maxLength={1000} disabled={!editable} value={editor.alignment.subjectConnection} onChange={e => patch({ alignment: { ...editor.alignment, subjectConnection: e.target.value } })} />
+                </Field>
+                <details className="lr-source-details">
+                  <summary>三つの資質・能力と、見取る証拠を確認・編集する</summary>
+                  <div className="stack">
+                  {editor.alignment.pillars.map((pillar, i) => (
+                  <div className="lr-form-two" key={pillar.key}>
+                    <Field label={pillar.label}>
+                      <textarea className="input" maxLength={1500} disabled={!editable} value={pillar.objective} onChange={e => patch({ alignment: { ...editor.alignment, pillars: editor.alignment.pillars.map((p, n) => n === i ? { ...p, objective: e.target.value } : p) } })} />
+                    </Field>
+                    <Field label="評価の証拠・残す成果物">
+                      <textarea className="input" maxLength={1500} disabled={!editable} value={pillar.evidence} onChange={e => patch({ alignment: { ...editor.alignment, pillars: editor.alignment.pillars.map((p, n) => n === i ? { ...p, evidence: e.target.value } : p) } })} />
+                    </Field>
+                  </div>
+                  ))}
+                  </div>
+                </details>
+                <details className="lr-source-details">
+                  <summary>四つの探究の過程と、活動の対応を確認・編集する</summary>
+                  <div className="stack">
+                  {editor.alignment.processes.map((process, i) => (
+                  <div className="stack" key={process.key}>
+                    <strong>{process.label}</strong>
+                    <div className="lr-form-three">
+                      <Field label="どの活動で行うか">
+                        <select className="input" disabled={!editable} value={process.stageIndex} onChange={e => patch({ alignment: { ...editor.alignment, processes: editor.alignment.processes.map((p, n) => n === i ? { ...p, stageIndex: Number(e.target.value) } : p) } })}>
+                          {editor.stages.map((stage, n) => <option key={n} value={n}>{n + 1}. {stage.title}</option>)}
+                        </select>
+                      </Field>
+                      <Field label="生徒の具体的な活動">
+                        <textarea className="input" maxLength={1500} disabled={!editable} value={process.activity} onChange={e => patch({ alignment: { ...editor.alignment, processes: editor.alignment.processes.map((p, n) => n === i ? { ...p, activity: e.target.value } : p) } })} />
+                      </Field>
+                      <Field label="残す証拠">
+                        <textarea className="input" maxLength={1500} disabled={!editable} value={process.evidence} onChange={e => patch({ alignment: { ...editor.alignment, processes: editor.alignment.processes.map((p, n) => n === i ? { ...p, evidence: e.target.value } : p) } })} />
+                      </Field>
+                    </div>
+                  </div>
+                  ))}
+                  </div>
+                </details>
+                <div className="lr-note">
+                  <b>参照した文部科学省の資料</b>
+                  {editor.alignment.sourceReferences.map(ref => <p key={ref.url + ref.section}><a href={ref.url} target="_blank" rel="noreferrer">{ref.title} ↗</a><br />{ref.section}（{ref.pages}）</p>)}
+                  <span>指導要領の全文や他教科の全項目を自動照合する機能ではありません。</span>
+                </div>
+              </section>
+            )}
             <div className="spread">
               <h3>授業の流れ</h3>
               <span
@@ -516,7 +610,7 @@ export default function CurriculumStudio({ role = 'company' }) {
                       <button
                         className="btn ghost small lr-remove-stage"
                         type="button"
-                        onClick={() => patch({ stages: editor.stages.filter((_, n) => n !== i) })}
+                        onClick={() => patch({ stages: editor.stages.filter((_, n) => n !== i), alignment: { ...editor.alignment, processes: editor.alignment.processes.map(p => ({ ...p, stageIndex: p.stageIndex > i ? p.stageIndex - 1 : Math.min(p.stageIndex, editor.stages.length - 2) })) } })}
                       >
                         この活動を削除
                       </button>
@@ -554,6 +648,8 @@ export default function CurriculumStudio({ role = 'company' }) {
             <details className="lr-source-details">
               <summary>もとになった企業コンテンツを見る</summary>
               <p>{editor.sourceContent}</p>
+              <p className="muted small">全文 {editor.materialAnalysis?.processedCharacters || editor.sourceContent.length}文字を、{editor.materialAnalysis?.fragmentCount || 0}件の記述に分けて参照しています。企業文の内容は自動で事実確認されません。</p>
+              {editor.materialAnalysis?.fragments.map(fragment => <p key={fragment.id}><b>[{fragment.id}]</b> {fragment.text}</p>)}
             </details>
             <ErrorBox error={error} />
             {!teacher && (
@@ -561,6 +657,12 @@ export default function CurriculumStudio({ role = 'company' }) {
                 <b>学校へ提供する前に</b><br />
                 内容の正確さ・出典・使用許諾・個人情報の有無を確認してください。提供後は、このPoCの教員向け教材ライブラリに表示されます。特定の学校だけに限定する設定はありません。
               </div>
+            )}
+            {teacher && editable && (
+              <label className="lr-note row">
+                <input type="checkbox" checked={alignmentConfirmed} onChange={e => setAlignmentConfirmed(e.target.checked)} />
+                <span>参照資料、自校の目標、各活動と評価の証拠を確認しました。教員の判断でこの授業案を承認します。</span>
+              </label>
             )}
             <div className="lr-editor-actions">
               {editable ? (
@@ -576,7 +678,7 @@ export default function CurriculumStudio({ role = 'company' }) {
                     >
                       {busy === 'save' ? '保存中…' : '変更を保存'}
                     </button>
-                    {(!teacher || editor.status !== 'approved' || dirty) && (
+                    {(!teacher || editor.status !== 'approved' || dirty || editor.alignment?.review?.status !== 'confirmed') && (
                       <button
                         className="btn primary"
                         type="button"
@@ -585,6 +687,7 @@ export default function CurriculumStudio({ role = 'company' }) {
                           totalMinutes !== editor.duration ||
                           !editor.title.trim() ||
                           !editor.objectivesText.trim() ||
+                          (teacher && (!alignmentConfirmed || !editor.alignment?.schoolGoal.trim() || !editor.alignment?.unitPosition.trim())) ||
                           editor.stages.some((s) => !s.title.trim() || !s.activity.trim())
                         }
                         onClick={() => transition(teacher ? 'approve' : 'publish')}
@@ -620,7 +723,7 @@ export default function CurriculumStudio({ role = 'company' }) {
               </p>
             )}
           </form>
-          {teacher && editor.teacherId && editor.status === 'approved' && !dirty && (
+          {teacher && editor.teacherId && editor.status === 'approved' && editor.alignment?.review?.status === 'confirmed' && !dirty && (
             <form className="lr-launch-panel stack" onSubmit={createLesson}>
               <div>
                 <span className="lr-eyebrow">READY FOR CLASS</span>

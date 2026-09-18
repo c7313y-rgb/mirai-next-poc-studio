@@ -7,6 +7,7 @@ import { uploadImages, sanitizeImage } from '../lib/upload.js';
 import { activeThemesForClass, isThemeActiveForClass, themeDto } from '../lib/themes.js';
 import { enqueue, queueRecordAnalysis } from '../jobs.js';
 import { openSurveysFor, surveyDto, validateAnswers } from '../lib/surveys.js';
+import { recommendThemes } from '../lib/recommendations.js';
 
 const r = Router();
 r.use(requireRole('student'));
@@ -36,7 +37,8 @@ r.get('/home', (req, res) => {
   const weekStart = new Date(Date.now() - 6 * 86400_000).toISOString();
   const submittedThisWeek = q.one("SELECT COUNT(*) c FROM records WHERE user_id=? AND status='submitted' AND submitted_at >= ?", u.id, weekStart).c;
   const total = q.one("SELECT COUNT(*) c FROM records WHERE user_id=? AND status='submitted'", u.id).c;
-  res.json({ themes, drafts, latest, surveys: openSurveysFor(u), stats: { submittedThisWeek, total } });
+  const interestRecords = q.all("SELECT tags FROM records WHERE user_id=? AND status='submitted' ORDER BY submitted_at DESC LIMIT 100", u.id);
+  res.json({ themes, recommendations: recommendThemes(themes, interestRecords), drafts, latest, surveys: openSurveysFor(u), stats: { submittedThisWeek, total } });
 });
 
 // S-03 テーマ詳細（閲覧ログ＝K-C3の分母）
