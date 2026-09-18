@@ -13,6 +13,7 @@ ENV NODE_ENV=production PORT=3000 DATA_DIR=/app/data BACKUP_DIR=/app/backups
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/server ./server
+COPY --from=build /app/shared ./shared
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/client/dist ./client/dist
 RUN mkdir -p /app/data /app/backups && chown node:node /app/data /app/backups

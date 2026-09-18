@@ -8,6 +8,12 @@
 
 ## すぐに体験する
 
+**ブラウザーだけで体験する：[GitHub公開デモ](https://c7313y-rgb.github.io/mirai-next-poc-studio/)**
+
+企業の教材作成 → 教員の編集・承認 → 授業進行 → 生徒の振り返りを、役割を切り替えて試せます。架空データを使い、編集は閲覧者のブラウザー内だけに保存します。localhost版と保存先は独立しています。アカウント認証、手帳OCR、運営KPI、外部API、複数端末の同期は公開版には含みません。[公開版の範囲と更新方法](docs/PUBLIC-DEMO.md)
+
+**全機能のlocalhost版を起動する：**
+
 Node.js 22.13以上とnpmを用意し、リポジトリのルートで実行します。
 
 ```bash
@@ -77,7 +83,7 @@ npm start
 - UI：React / Vite / ハッシュルーティング
 - 保存：サーバーのSQLiteと画像ストア。リロード・再起動後も保持
 - AI：既定mock。本番の実AIは国内処理を確認したBedrock設定を使用し、直接Anthropic設定は本番起動時に拒否します。教材化とテーマ推薦はローカルのルールで処理し、外部AIを呼び出しません
-- 配置：Dockerfile付属。認証API・DBが必要なためGitHub Pagesへの静的配置だけでは動作しません
+- 配置：全機能版はDockerfile付属で認証API・DBが必要です。GitHub Pages用には、ブラウザー内だけで動作する独立した公開デモをビルドします
 
 ## データの境界
 
@@ -96,6 +102,7 @@ npm start
 - [画像の出典と生成方法](docs/ASSETS.md)
 - [追加構想への対応と実装の範囲](docs/DIRECTION-V2.md)
 - [学びの設計思想と公開ページ](docs/SERVICE-DESIGN.md)
+- [GitHub公開デモの範囲と更新方法](docs/PUBLIC-DEMO.md)
 
 UIと導線は以前の [mirAI NEXT PoC](https://mirai-next-poc.changyaokuang.chatgpt.site/) の教材化・自校編集・匿名分析を参考にしています。添付資料の個人情報・契約情報・原本はこのリポジトリに含めていません。
 

@@ -1,0 +1,49 @@
+name: Publish public demo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - name: Install client dependencies
+        run: npm --prefix client ci
+      - name: Test browser-only demo data
+        run: node --test tests/public-demo.test.js
+      - name: Build isolated public demo
+        run: npm --prefix client run build -- --mode pages
+      - name: Check public artifact
+        run: node scripts/check-pages-build.mjs
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: client/dist-pages
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

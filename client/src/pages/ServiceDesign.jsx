@@ -14,13 +14,13 @@ function Scene({ scene, caption, eager = false }) {
   return <figure className="sd-scene"><img src={scene.src} alt={scene.alt} width="1536" height="1024" loading={eager ? 'eager' : 'lazy'} /><figcaption>{caption} <span>AI生成イメージ</span></figcaption></figure>;
 }
 
-export default function ServiceDesign({ user }) {
+export default function ServiceDesign({ user, publicDemo = false }) {
   useEffect(() => {
     const previous = document.title;
     document.title = '学びの設計思想 | 副担任mirAI NEXT';
     return () => { document.title = previous; };
   }, []);
-  const entry = user ? 'ホームへ戻る' : 'ログイン画面へ';
+  const entry = publicDemo ? 'デモの入口へ' : user ? 'ホームへ戻る' : 'ログイン画面へ';
   return (
     <div className="sd-page">
       <header className="sd-topbar">
@@ -28,6 +28,7 @@ export default function ServiceDesign({ user }) {
         <Link to="/" className="btn primary sd-entry">{entry}<span aria-hidden="true"> →</span></Link>
       </header>
       <main className="sd-main">
+        {publicDemo && <p className="pd-callout">以下はサーバー版PoCを含むサービス全体の設計思想です。この公開デモでは、教材化・授業・振り返りの主な流れを同じブラウザー内で体験できます。画像OCR・正式アカウント・実際の学校間共有は利用できません。</p>}
         <section className="sd-hero" aria-labelledby="sd-title">
           <div className="sd-hero-copy">
             <p className="sd-eyebrow">OUR APPROACH / 学びの設計思想</p>

@@ -6,6 +6,7 @@
 node_modules
 client/node_modules
 client/dist
+client/dist-pages
 data
 data-demo
 backups
